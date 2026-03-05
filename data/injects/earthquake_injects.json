@@ -1,0 +1,240 @@
+{
+    "scenario_id": "earthquake_batagram_7_4",
+    "injects": [
+        {
+            "id": "inject_001",
+            "phase_id": "d_day",
+            "time_offset": "+1h",
+            "title": "Initial Earthquake Impact Report",
+            "description": "M7.4 earthquake struck at 06:30. Multiple reports of building collapses in Batagram City. Communication lines partially disrupted. District administration requesting immediate federal assistance.",
+            "severity": "critical",
+            "target_wings": [
+                "ops_wing",
+                "tech_early_warning"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_002",
+            "phase_id": "d_day",
+            "time_offset": "+2h",
+            "title": "Aftershock M5.8",
+            "description": "A magnitude 5.8 aftershock has caused secondary collapses in Batagram City center. Rescue teams report additional casualties. Building safety becomes critical concern.",
+            "severity": "critical",
+            "target_wings": [
+                "ops_wing",
+                "tech_early_warning",
+                "tech_e_m"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_003",
+            "phase_id": "d_day",
+            "time_offset": "+4h",
+            "title": "KKH Road Blocked",
+            "description": "Karakoram Highway blocked at 3 points due to landslides between Mansehra and Batagram. No road access to district. Air support requested.",
+            "severity": "high",
+            "target_wings": [
+                "logistics",
+                "tech_e_m",
+                "military_media"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_004",
+            "phase_id": "d_day",
+            "time_offset": "+6h",
+            "title": "Power Grid Failure Confirmed",
+            "description": "Complete power grid failure across Batagram district confirmed by WAPDA. Emergency generators needed for hospital and NEOC operations.",
+            "severity": "high",
+            "target_wings": [
+                "tech_e_m",
+                "logistics"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_005",
+            "phase_id": "d1_to_d5",
+            "time_offset": "D+1 morning",
+            "title": "200 Children Trapped in School",
+            "description": "Reports from local authorities: approximately 200 children trapped in collapsed Government Primary School in Batagram Tehsil. Urgent SAR deployment needed.",
+            "severity": "critical",
+            "target_wings": [
+                "ops_wing",
+                "gcc",
+                "tech_e_m"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_006",
+            "phase_id": "d1_to_d5",
+            "time_offset": "D+2",
+            "title": "Telecom Partially Restored",
+            "description": "Pakistan Telecommunication Authority reports 40% mobile network coverage restored in Batagram City area. Rural areas still in communication blackout.",
+            "severity": "medium",
+            "target_wings": [
+                "military_media",
+                "ops_wing",
+                "pcc"
+            ],
+            "response_required": false
+        },
+        {
+            "id": "inject_007",
+            "phase_id": "d1_to_d5",
+            "time_offset": "D+3",
+            "title": "Cholera Cases in Displacement Camp",
+            "description": "Health workers report 15 suspected cholera cases in the largest displacement camp near Batagram City. Water supply contaminated by landslide debris.",
+            "severity": "high",
+            "target_wings": [
+                "drr",
+                "logistics",
+                "gcc"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_008",
+            "phase_id": "d1_to_d5",
+            "time_offset": "D+4",
+            "title": "International SAR Teams at Islamabad",
+            "description": "Three international Urban SAR teams (Turkey, UAE, China) have arrived at Islamabad airport. Transport to Batagram needed. Coordination with DDMA required.",
+            "severity": "medium",
+            "target_wings": [
+                "pcc",
+                "logistics",
+                "ops_wing"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_009",
+            "phase_id": "d5_to_d10",
+            "time_offset": "D+6",
+            "title": "Winter Storm Warning",
+            "description": "PMD issues severe weather warning: heavy snowfall expected in Batagram above 2000m within 48 hours. 30,000 displaced persons in makeshift shelters at risk of hypothermia.",
+            "severity": "critical",
+            "target_wings": [
+                "tech_early_warning",
+                "logistics",
+                "ops_wing"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_010",
+            "phase_id": "d5_to_d10",
+            "time_offset": "D+7",
+            "title": "Tarbela Dam Monitoring Alert",
+            "description": "Tarbela Dam monitoring station reports minor seepage increase following continued aftershocks. WAPDA engineers dispatched for assessment. Downstream communities placed on alert.",
+            "severity": "high",
+            "target_wings": [
+                "tech_early_warning",
+                "infra_audit",
+                "ops_wing"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_011",
+            "phase_id": "d5_to_d10",
+            "time_offset": "D+8",
+            "title": "GBV Incident Reports",
+            "description": "GCC protection monitors report 5 GBV incidents in displacement camps. Women-friendly spaces insufficient. Urgent need for female protection officers.",
+            "severity": "high",
+            "target_wings": [
+                "gcc",
+                "ops_wing"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_012",
+            "phase_id": "d10_to_d20",
+            "time_offset": "D+12",
+            "title": "Shelter Gap Analysis",
+            "description": "50,000 winterized tents distributed, but 30,000 families still without adequate shelter. Provincial government requests additional federal support for transitional shelters.",
+            "severity": "high",
+            "target_wings": [
+                "logistics",
+                "pcc",
+                "infra_audit"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_013",
+            "phase_id": "d10_to_d20",
+            "time_offset": "D+15",
+            "title": "School Resumption Planning",
+            "description": "Education department requests temporary learning centers for 45,000 affected students. 60% of school buildings damaged or destroyed. UNICEF offers support.",
+            "severity": "medium",
+            "target_wings": [
+                "gcc",
+                "infra_audit",
+                "pcc",
+                "nidm"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_014",
+            "phase_id": "d10_to_d20",
+            "time_offset": "D+18",
+            "title": "Compensation Disbursement Issues",
+            "description": "Affected families complain of delays in compensation payments. Biometric verification system not functional in remote areas. Political pressure mounting.",
+            "severity": "medium",
+            "target_wings": [
+                "pcc",
+                "ops_wing",
+                "military_media"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_015",
+            "phase_id": "d20_to_d50",
+            "time_offset": "D+25",
+            "title": "Reconstruction Cost Estimate",
+            "description": "PM Office requests comprehensive reconstruction cost estimate for Batagram. Preliminary assessment indicates PKR 85 billion needed for infrastructure and housing.",
+            "severity": "medium",
+            "target_wings": [
+                "infra_audit",
+                "nidm",
+                "ops_wing"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_016",
+            "phase_id": "d20_to_d50",
+            "time_offset": "D+30",
+            "title": "Lessons Learned Workshop",
+            "description": "Chairman NDMA directs NIDM to organize comprehensive lessons learned workshop. All wings to submit after-action reports within 2 weeks.",
+            "severity": "low",
+            "target_wings": [
+                "nidm",
+                "ops_wing"
+            ],
+            "response_required": true
+        },
+        {
+            "id": "inject_017",
+            "phase_id": "d20_to_d50",
+            "time_offset": "D+40",
+            "title": "Build Back Better Framework",
+            "description": "International donors (World Bank, ADB) offer USD 500M for reconstruction. Require earthquake-resistant building codes compliance for all funded projects.",
+            "severity": "medium",
+            "target_wings": [
+                "infra_audit",
+                "drr",
+                "pcc"
+            ],
+            "response_required": true
+        }
+    ]
+}

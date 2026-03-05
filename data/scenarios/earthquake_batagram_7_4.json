@@ -1,0 +1,45 @@
+{
+    "id": "earthquake_batagram_7_4",
+    "name": "Earthquake — Batagram KP M7.4",
+    "type": "earthquake",
+    "magnitude": 7.4,
+    "location": {
+        "district": "Batagram",
+        "province": "Khyber Pakhtunkhwa",
+        "country": "Pakistan",
+        "coordinates": { "lat": 34.68, "lon": 73.02 },
+        "depth_km": 15,
+        "terrain": "Mountainous, steep valleys, altitude 600-4500m"
+    },
+    "event_time": "06:30 local time, winter season",
+    "impact": {
+        "estimated_fatalities": "2,000 - 5,000",
+        "estimated_injuries": "10,000 - 25,000",
+        "displaced_population": "80,000 - 150,000",
+        "houses_damaged_destroyed": "30,000 - 60,000",
+        "infrastructure": {
+            "roads": "Major landslides blocking KKH and access roads",
+            "bridges": "Multiple bridge collapses in valleys",
+            "hospitals": "District HQ hospital partially collapsed",
+            "schools": "Widespread school building collapses",
+            "power": "Grid failure, estimated 7-14 day restoration",
+            "telecom": "Cell towers damaged, partial communication blackout",
+            "water": "Pipeline damage, contamination risk"
+        },
+        "secondary_hazards": [
+            "M5.0+ aftershocks expected for weeks",
+            "Landslides due to unstable terrain",
+            "Hypothermia risk for displaced populations",
+            "Waterborne disease outbreak risk",
+            "Tarbela Dam proximity requires monitoring"
+        ]
+    },
+    "context": "Batagram District in Mansehra Division, KP, near the 2005 M7.6 earthquake epicenter. Located on the Hazara-Kashmir Syntaxis. Population ~400,000, 85% rural. Limited hospitals, single main road near KKH.",
+    "phases": [
+        { "id": "d_day", "label": "D Day", "days": "Day 0", "focus": "Immediate response & activation" },
+        { "id": "d1_to_d5", "label": "D+1 to D+5", "days": "Days 1-5", "focus": "Search & rescue, emergency relief" },
+        { "id": "d5_to_d10", "label": "D+5 to D+10", "days": "Days 5-10", "focus": "Sustained relief, infrastructure restoration" },
+        { "id": "d10_to_d20", "label": "D+10 to D+20", "days": "Days 10-20", "focus": "Early recovery transition" },
+        { "id": "d20_to_d50", "label": "D+20 to D+50", "days": "Days 20-50", "focus": "Long-term recovery & reconstruction" }
+    ]
+}

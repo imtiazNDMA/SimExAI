@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimEx AI — NDMA Earthquake Simulation Exercise</title>
+    <meta name="description"
+        content="AI-powered simulation exercise chatbot for NDMA Pakistan earthquake disaster response training">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header id="app-header">
+        <div class="header-left">
+            <div class="logo">
+                <span class="logo-icon">🌍</span>
+                <div class="logo-text">
+                    <h1>SimEx AI</h1>
+                    <span class="logo-subtitle">NDMA Simulation Exercise</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-center">
+            <div class="scenario-badge" id="scenario-badge">
+                <span class="badge-icon">⚡</span>
+                <span class="badge-text">Earthquake — Batagram KP — M7.4</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-outline" id="btn-reset" title="Reset Exercise">
+                <span>↻</span> Reset
+            </button>
+            <button class="btn btn-outline" id="btn-back-phase" title="Go Back to Previous Phase" disabled>
+                <span>◀</span> Back
+            </button>
+            <button class="btn btn-primary" id="btn-advance-phase" title="Advance to Next Phase">
+                <span>▶</span> Advance Phase
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <main id="app-main">
+        <!-- Left Sidebar: Wing Selector -->
+        <aside id="wing-panel" class="panel">
+            <div class="panel-header">
+                <h2>NDMA Wings</h2>
+                <span class="wing-count" id="wing-count">10</span>
+            </div>
+            <nav id="wing-list" class="wing-list" aria-label="NDMA Wings">
+                <!-- Wings populated by JS -->
+            </nav>
+        </aside>
+
+        <!-- Center: Chat Area -->
+        <section id="chat-panel" class="panel">
+            <div class="chat-header" id="chat-header">
+                <div class="chat-wing-info">
+                    <span class="chat-wing-icon" id="chat-wing-icon">🎯</span>
+                    <div>
+                        <h2 id="chat-wing-name">Select a Wing</h2>
+                        <span class="chat-phase-label" id="chat-phase-label">—</span>
+                    </div>
+                </div>
+                <div class="chat-actions-btn">
+                    <button class="btn btn-ghost" id="btn-show-actions" title="View Wing Actions">
+                        📋 Actions
+                    </button>
+                </div>
+            </div>
+            <div id="chat-messages" class="chat-messages" role="log" aria-live="polite">
+                <div class="welcome-message" id="welcome-message">
+                    <div class="welcome-icon">🌍</div>
+                    <h3>SimEx AI — Exercise Control</h3>
+                    <p>Select a wing from the left panel to begin the simulation exercise.</p>
+                    <p class="welcome-hint">Scenario: M7.4 Earthquake, Batagram KP</p>
+                </div>
+            </div>
+            <form id="chat-form" class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" disabled>
+                <button type="submit" class="btn btn-send" id="btn-send" disabled>
+                    <span>➤</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- Right Sidebar: Timeline & Injects -->
+        <aside id="timeline-panel" class="panel">
+            <div class="panel-header">
+                <h2>Timeline</h2>
+            </div>
+            <div id="phase-timeline" class="phase-timeline">
+                <!-- Phases populated by JS -->
+            </div>
+
+            <div class="panel-header inject-header">
+                <h2>Scenario Injects</h2>
+                <span class="inject-count" id="inject-count">0</span>
+            </div>
+            <div id="inject-list" class="inject-list">
+                <div class="inject-empty">No injects for this phase yet.</div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Actions Modal -->
+    <div id="actions-modal" class="modal-overlay" hidden>
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="actions-modal-title">Wing Actions</h3>
+                <button class="btn btn-ghost modal-close" id="btn-close-actions">✕</button>
+            </div>
+            <div class="modal-body">
+                <ul id="actions-list" class="actions-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
