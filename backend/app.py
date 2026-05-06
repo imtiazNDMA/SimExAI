@@ -6,8 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from .models import ChatRequest, ChatResponse
+from .ollama_engine import OllamaEngine
 from .scenario_engine import ScenarioEngine
-from .template_engine import TemplateEngine
 
 app = FastAPI(
     title="SimEx AI",
@@ -26,7 +26,7 @@ app.add_middleware(
 
 # Initialize engines
 scenario = ScenarioEngine()
-responder = TemplateEngine()
+responder = OllamaEngine(scenario)
 
 
 # ── API Routes ──────────────────────────────────────────────

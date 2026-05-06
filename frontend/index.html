@@ -1,129 +1,177 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SimEx AI — NDMA Earthquake Simulation Exercise</title>
-    <meta name="description"
-        content="AI-powered simulation exercise chatbot for NDMA Pakistan earthquake disaster response training">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SimexAI — NDMA Simulation Exercise</title>
+  <meta name="description" content="AI-powered simulation exercise platform for NDMA Pakistan disaster response training">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <!-- Header -->
-    <header id="app-header">
-        <div class="header-left">
-            <div class="logo">
-                <span class="logo-icon">🌍</span>
-                <div class="logo-text">
-                    <h1>SimEx AI</h1>
-                    <span class="logo-subtitle">NDMA Simulation Exercise</span>
-                </div>
-            </div>
+<div id="app">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <header id="header">
+    <div class="header-row">
+
+      <div class="header-left">
+        <button id="sidebar-toggle" class="icon-btn" aria-label="Toggle sidebar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="brand">
+          <div class="brand-mark">
+            <img src="ndma_logo.png" alt="NDMA" class="brand-logo-img">
+          </div>
+          <span class="brand-name">SimexAI</span>
         </div>
-        <div class="header-center">
-            <div class="scenario-badge" id="scenario-badge">
-                <span class="badge-icon">⚡</span>
-                <span class="badge-text">Earthquake — Batagram KP — M7.4</span>
-            </div>
-        </div>
-        <div class="header-right">
-            <button class="btn btn-outline" id="btn-reset" title="Reset Exercise">
-                <span>↻</span> Reset
-            </button>
-            <button class="btn btn-outline" id="btn-back-phase" title="Go Back to Previous Phase" disabled>
-                <span>◀</span> Back
-            </button>
-            <button class="btn btn-primary" id="btn-advance-phase" title="Advance to Next Phase">
-                <span>▶</span> Advance Phase
-            </button>
-        </div>
-    </header>
+      </div>
 
-    <!-- Main Layout -->
-    <main id="app-main">
-        <!-- Left Sidebar: Wing Selector -->
-        <aside id="wing-panel" class="panel">
-            <div class="panel-header">
-                <h2>NDMA Wings</h2>
-                <span class="wing-count" id="wing-count">10</span>
-            </div>
-            <nav id="wing-list" class="wing-list" aria-label="NDMA Wings">
-                <!-- Wings populated by JS -->
-            </nav>
-        </aside>
-
-        <!-- Center: Chat Area -->
-        <section id="chat-panel" class="panel">
-            <div class="chat-header" id="chat-header">
-                <div class="chat-wing-info">
-                    <span class="chat-wing-icon" id="chat-wing-icon">🎯</span>
-                    <div>
-                        <h2 id="chat-wing-name">Select a Wing</h2>
-                        <span class="chat-phase-label" id="chat-phase-label">—</span>
-                    </div>
-                </div>
-                <div class="chat-actions-btn">
-                    <button class="btn btn-ghost" id="btn-show-actions" title="View Wing Actions">
-                        📋 Actions
-                    </button>
-                </div>
-            </div>
-            <div id="chat-messages" class="chat-messages" role="log" aria-live="polite">
-                <div class="welcome-message" id="welcome-message">
-                    <div class="welcome-icon">🌍</div>
-                    <h3>SimEx AI — Exercise Control</h3>
-                    <p>Select a wing from the left panel to begin the simulation exercise.</p>
-                    <p class="welcome-hint">Scenario: M7.4 Earthquake, Batagram KP</p>
-                </div>
-            </div>
-            <form id="chat-form" class="chat-input-area">
-                <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" disabled>
-                <button type="submit" class="btn btn-send" id="btn-send" disabled>
-                    <span>➤</span>
-                </button>
-            </form>
-        </section>
-
-        <!-- Right Sidebar: Timeline & Injects -->
-        <aside id="timeline-panel" class="panel">
-            <div class="panel-header">
-                <h2>Timeline</h2>
-            </div>
-            <div id="phase-timeline" class="phase-timeline">
-                <!-- Phases populated by JS -->
-            </div>
-
-            <div class="panel-header inject-header">
-                <h2>Scenario Injects</h2>
-                <span class="inject-count" id="inject-count">0</span>
-            </div>
-            <div id="inject-list" class="inject-list">
-                <div class="inject-empty">No injects for this phase yet.</div>
-            </div>
-        </aside>
-    </main>
-
-    <!-- Actions Modal -->
-    <div id="actions-modal" class="modal-overlay" hidden>
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="actions-modal-title">Wing Actions</h3>
-                <button class="btn btn-ghost modal-close" id="btn-close-actions">✕</button>
-            </div>
-            <div class="modal-body">
-                <ul id="actions-list" class="actions-list"></ul>
-            </div>
-        </div>
+      <div class="header-right">
+        <button id="btn-reset" class="ctrl-btn" title="Reset Exercise">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Reset
+        </button>
+        <button id="btn-back-phase" class="ctrl-btn" disabled title="Previous Phase">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button id="btn-advance-phase" class="ctrl-btn accent" title="Advance to Next Phase">
+          Advance
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <button id="theme-toggle" class="icon-btn theme-btn" aria-label="Toggle theme" title="Switch dark / light mode">
+          <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+          <svg class="icon-sun"  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+        <button id="btn-injects" class="injects-btn" aria-label="Scenarios & Injects" title="Open Scenarios & Injects">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h4" stroke-linecap="round"/></svg>
+          <span class="inject-pill" id="inject-count">0</span>
+        </button>
+      </div>
     </div>
 
-    <script src="app.js"></script>
-</body>
+    <!-- Phase Timeline Strip -->
+    <div class="timeline-strip" id="timeline-strip">
+      <!-- phases rendered by JS -->
+    </div>
+  </header>
 
+  <!-- ══════════════ BODY ══════════════ -->
+  <div id="body-wrap">
+
+    <!-- Left Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-inner">
+        <div class="sidebar-top">
+          <span class="sidebar-label">Wings</span>
+          <span class="wing-count-badge" id="wing-count">10</span>
+        </div>
+        <nav id="wing-list" aria-label="NDMA Wings" role="navigation"></nav>
+      </div>
+    </aside>
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <!-- Chat Area -->
+    <main id="chat-main">
+
+      <!-- Chat topbar -->
+      <div class="chat-topbar" id="chat-topbar">
+        <div class="chat-wing-info">
+          <div class="chat-wing-avatar" id="chat-wing-icon">🎯</div>
+          <div class="chat-wing-meta">
+            <h2 id="chat-wing-name">Select a Wing</h2>
+            <span class="chat-phase-tag" id="chat-phase-label">—</span>
+          </div>
+        </div>
+        <button class="topbar-action-btn" id="btn-show-actions" title="Wing Actions" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>
+          Actions
+        </button>
+      </div>
+
+      <!-- Messages -->
+      <div id="chat-messages" class="chat-messages" role="log" aria-live="polite">
+        <div class="welcome-screen" id="welcome-message">
+          <div class="welcome-glow"></div>
+          <div class="welcome-content">
+            <div class="welcome-logo">
+              <div class="welcome-brand-mark">
+                <img src="ndma_logo.png" alt="NDMA" class="brand-logo-img">
+              </div>
+            </div>
+            <h1 class="welcome-title">SimexAI</h1>
+            <p class="welcome-sub">AI-powered disaster simulation platform<br>for NDMA Pakistan</p>
+            <p class="welcome-cta">← Select a wing from the sidebar to begin</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Dock -->
+      <div class="input-dock">
+        <form id="chat-form" class="input-form" autocomplete="off">
+          <div class="input-wrap" id="input-wrap">
+            <span class="input-prefix-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </span>
+            <input
+              type="text"
+              id="chat-input"
+              placeholder="Type your response or ask the wing AI..."
+              autocomplete="off"
+              disabled
+            >
+            <button type="submit" id="btn-send" class="send-btn" disabled aria-label="Send">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ══════════════ RIGHT DRAWER (Scenarios & Injects) ══════════════ -->
+  <div id="drawer-overlay" class="drawer-overlay"></div>
+  <aside id="right-drawer" class="right-drawer" aria-label="Scenarios and Injects">
+    <div class="drawer-header">
+      <div class="drawer-title-row">
+        <div class="drawer-icon-wrap">📋</div>
+        <div>
+          <h2 class="drawer-title">Scenarios &amp; Injects</h2>
+          <span class="drawer-sub" id="drawer-phase-label">Current Phase</span>
+        </div>
+      </div>
+      <button id="drawer-close" class="icon-btn" aria-label="Close drawer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="inject-list" class="inject-scroll">
+      <div class="inject-empty-state">
+        <div class="inject-empty-icon">📭</div>
+        <p>No injects for this phase yet.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════════ ACTIONS MODAL ══════════════ -->
+  <div id="actions-modal" class="modal-overlay" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="actions-modal-title">Wing Actions</h3>
+        <button id="btn-close-actions" class="icon-btn" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <ul id="actions-list" class="actions-list"></ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="app.js"></script>
+</body>
 </html>
