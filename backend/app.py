@@ -1,13 +1,19 @@
 """SimEx AI Backend — FastAPI application."""
 from datetime import datetime, timezone
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+import json
+import re
+import shutil
+import tempfile
 
 from .models import ChatRequest, ChatResponse
 from .ollama_engine import OllamaEngine
-from .scenario_engine import ScenarioEngine
+from .scenario_engine import PHASES, ScenarioEngine
+from .document_parser import parse_document
+
 
 app = FastAPI(
     title="SimEx AI",
@@ -28,8 +34,222 @@ app.add_middleware(
 scenario = ScenarioEngine()
 responder = OllamaEngine(scenario)
 
+DATA_DIR = Path(__file__).parent.parent / "data"
+SCENARIO_DIR = DATA_DIR / "scenarios"
+INJECT_DIR = DATA_DIR / "injects"
+PHASE_IDS = {phase["id"] for phase in PHASES}
+
+
+def _slugify(value: str | None, fallback: str = "uploaded_scenario") -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", (value or "").lower()).strip("_")
+    return slug or fallback
+
+
+def _read_upload_as_context(file: UploadFile) -> dict:
+    """Parse an upload through a temporary file and remove it immediately."""
+    safe_name = Path(file.filename or "scenario").name
+    with tempfile.TemporaryDirectory(prefix="simexai_upload_", dir=Path(__file__).parent) as tmp_dir:
+        file_path = Path(tmp_dir) / safe_name
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        return parse_document(file_path)
+
+
+def _parse_llm_json(raw_output: str) -> dict:
+    try:
+        return json.loads(raw_output)
+    except json.JSONDecodeError:
+        pass
+
+    json_str = raw_output
+    json_match = re.search(r"```(?:json)?\s*(.*?)\s*```", raw_output, re.DOTALL)
+    if json_match:
+        json_str = json_match.group(1)
+
+    start_idx = json_str.find("{")
+    end_idx = json_str.rfind("}")
+    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+        json_str = json_str[start_idx:end_idx + 1]
+
+    try:
+        import json_repair
+    except ImportError:
+        return json.loads(json_str)
+
+    parsed = json_repair.loads(json_str)
+    return json.loads(parsed) if isinstance(parsed, str) else parsed
+
+
+def _scenario_id_for_upload(scenario_data: dict, filename: str | None) -> str:
+    name = scenario_data.get("name") or Path(filename or "").stem
+    slug = _slugify(str(name), fallback="uploaded_scenario")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    return f"{slug}_{timestamp}"
+
+
+def _normalize_injects(injects: list, scenario_id: str) -> list[dict]:
+    normalized = []
+    for index, item in enumerate(injects if isinstance(injects, list) else [], start=1):
+        if not isinstance(item, dict):
+            continue
+
+        phase_id = item.get("phase_id") if item.get("phase_id") in PHASE_IDS else "d_day"
+        item["id"] = item.get("id") or f"{scenario_id}_inj_{index:02d}"
+        item["phase_id"] = phase_id
+        item["time_offset"] = item.get("time_offset") or "TBD"
+        item["title"] = item.get("title") or f"Inject {index}"
+        item["description"] = item.get("description") or "Scenario-derived inject."
+        item["severity"] = str(item.get("severity") or "MEDIUM").upper()
+        item["status"] = item.get("status") or "pending"
+        item["required_wings"] = item.get("required_wings") or item.get("target_wings") or []
+        normalized.append(item)
+    return normalized
+
+
+def _build_upload_user_content(parsed_data: dict) -> list[dict]:
+    extracted_text = parsed_data.get("text", "")
+    image_count = parsed_data.get("image_count", 0)
+    vision_images = parsed_data.get("vision_images") or []
+    visual_page_count = parsed_data.get("visual_page_count", len(vision_images))
+    visual_labels = [
+        str(item.get("label") or f"Page {index}")
+        for index, item in enumerate(vision_images, start=1)
+        if isinstance(item, dict)
+    ]
+    visual_summary = "\n".join(f"- {label}" for label in visual_labels) or "- None"
+    text_context = extracted_text or "[No machine-readable text was extracted from this upload.]"
+
+    content = [
+        {
+            "type": "text",
+            "text": (
+                "Here is the extracted upload context and full-page visual context.\n\n"
+                f"Extracted text:\n{text_context}\n\n"
+                f"Embedded images detected in the source document: {image_count}\n"
+                f"Full-page visual images attached: {visual_page_count}\n"
+                f"Attached visual pages:\n{visual_summary}\n\n"
+                "Use both the extracted text and every attached page image. Inspect maps, "
+                "tables, charts, scanned content, diagrams, visible damage indicators, "
+                "timelines, captions, labels, and page layout when creating the scenario "
+                "summary and injects. If text and visuals conflict, prefer concrete "
+                "visible evidence from the page images and note it in the generated "
+                "scenario context without mentioning implementation details.\n\n"
+                "Parse this and output the required JSON."
+            ),
+        }
+    ]
+
+    for index, item in enumerate(vision_images, start=1):
+        if not isinstance(item, dict) or not item.get("data"):
+            continue
+        label = item.get("label") or f"Page {index}"
+        mime_type = item.get("mime_type") or "image/jpeg"
+        content.append({"type": "text", "text": f"Visual page attachment: {label}"})
+        content.append(
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime_type};base64,{item['data']}"},
+            }
+        )
+
+    return content
+
 
 # ── API Routes ──────────────────────────────────────────────
+
+
+@app.post("/api/scenario/upload")
+async def upload_scenario(file: UploadFile = File(...)):
+    """Use an uploaded file as LLM context and persist generated JSON only."""
+    from langchain_core.messages import HumanMessage, SystemMessage
+
+    system_msg = SystemMessage(content='''You are an expert disaster management planner. 
+Use the uploaded scenario document as context. Create one scenario summary and phase injects from that document only.
+Use both the extracted text and the attached full-page visual images. The visuals may contain maps, tables, charts, scanned content, diagrams, damage indicators, timelines, captions, and page layout clues that are not present in extracted text.
+Output ONLY valid JSON that matches this structure. No markdown formatting ticks around the JSON.
+{
+  "scenario": {
+    "id": "generated_from_upload",
+    "name": "Generated Scenario",
+    "type": "Disaster Type",
+    "magnitude": "Severity/Intensity",
+    "location": "Location string",
+    "impact": "Brief impact description",
+    "context": "Context description",
+    "phases": {
+        "d_day": "D Day timeframe",
+        "d1_to_d5": "Days 1-5 timeframe",
+        "d5_to_d10": "Days 5-10 timeframe",
+        "d10_to_d20": "Days 10-20 timeframe",
+        "d20_to_d50": "Days 20-50 timeframe"
+    }
+  },
+  "injects": [
+    {
+      "id": "inj_1",
+      "phase_id": "d_day",
+      "time_offset": "H+2HRS",
+      "title": "Inject title",
+      "description": "inject description",
+      "severity": "HIGH",
+      "status": "pending",
+      "required_wings": ["w_neoc", "w_operations"]
+    },
+    ... add some injects spaced out among phase_id "d_day", "d1_to_d5", "d5_to_d10", "d10_to_d20", "d20_to_d50"
+  ]
+}''')
+    raw_output = "No raw output generated"
+
+    try:
+        parsed_data = _read_upload_as_context(file)
+        image_count = parsed_data.get("image_count", 0)
+        visual_page_count = parsed_data.get("visual_page_count", 0)
+        visual_mode = parsed_data.get("visual_mode", "none")
+        user_msg = HumanMessage(content=_build_upload_user_content(parsed_data))
+
+        llm_res = responder.upload_llm.invoke([system_msg, user_msg])
+        raw_output = llm_res.content
+        parsed_json = _parse_llm_json(raw_output)
+        if not isinstance(parsed_json, dict):
+            raise ValueError("LLM output was not a JSON object")
+
+        scenario_data = parsed_json.get("scenario") or {}
+        if not isinstance(scenario_data, dict):
+            scenario_data = {}
+        scenario_id = _scenario_id_for_upload(scenario_data, file.filename)
+        injects_id = f"{scenario_id}_injects"
+        injects_list = _normalize_injects(parsed_json.get("injects") or [], scenario_id)
+
+        scenario_data["id"] = scenario_id
+        scenario_data["is_uploaded"] = True
+        scenario_data["source_file"] = Path(file.filename or "scenario").name
+        scenario_data["source_image_count"] = image_count
+        scenario_data["source_visual_page_count"] = visual_page_count
+        scenario_data["source_visual_mode"] = visual_mode
+
+        scenario_path = SCENARIO_DIR / f"{scenario_id}.json"
+        injects_path = INJECT_DIR / f"{injects_id}.json"
+        SCENARIO_DIR.mkdir(parents=True, exist_ok=True)
+        INJECT_DIR.mkdir(parents=True, exist_ok=True)
+
+        with open(scenario_path, "w", encoding="utf-8") as f:
+            json.dump(scenario_data, f, indent=4)
+        
+        with open(injects_path, "w", encoding="utf-8") as f:
+            json.dump({"injects": injects_list}, f, indent=4)
+    
+        scenario.load_scenario(scenario_id, injects_id)
+        return {
+            "message": "Scenario uploaded and extracted successfully.",
+            "scenario": scenario.get_scenario_info(),
+            "phases": scenario.get_all_phases(),
+            "injects": scenario.get_current_injects(),
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print("Raw Output:", raw_output)
+        return {"message": f"Failed to process upload: {str(e)}", "phases": scenario.get_all_phases()}
 
 
 @app.get("/api/scenario")

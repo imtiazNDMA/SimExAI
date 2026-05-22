@@ -29,7 +29,30 @@
         </div>
       </div>
 
+      <div id="header-scenario-boxes" class="header-scenario-boxes" aria-label="Scenario summary" hidden>
+        <div class="scenario-box">
+          <span class="scenario-box-label">Scenario</span>
+          <span id="box-name" class="scenario-box-value">N/A</span>
+        </div>
+        <div class="scenario-box">
+          <span class="scenario-box-label">Disaster Type</span>
+          <span id="box-type" class="scenario-box-value">N/A</span>
+        </div>
+        <div class="scenario-box">
+          <span class="scenario-box-label">Location</span>
+          <span id="box-location" class="scenario-box-value">N/A</span>
+        </div>
+        <div class="scenario-box">
+          <span class="scenario-box-label">Impact</span>
+          <span id="box-impact" class="scenario-box-value">N/A</span>
+        </div>
+      </div>
+
       <div class="header-right">
+        <input id="scenario-file-input" type="file" accept=".pdf,.docx,.txt" hidden>
+        <button id="btn-upload-scenario" class="ctrl-btn" title="Upload Scenario">
+          Upload Scenario
+        </button>
         <button id="btn-reset" class="ctrl-btn" title="Reset Exercise">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
           Reset

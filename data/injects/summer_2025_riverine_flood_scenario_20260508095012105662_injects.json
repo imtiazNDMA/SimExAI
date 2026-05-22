@@ -1,0 +1,31 @@
+{
+    "injects": [
+        {
+            "id": "inj_1",
+            "phase_id": "d_day",
+            "time_offset": "H+0HRS",
+            "title": "Peak Flood Event Initiation",
+            "description": "Riverine flooding has commenced. High flows in the Indus River at Sukkur Barrage have reached 500,000 cusecs. Tarbela Dam is at maximum reservoir capacity. Heavy rains on upper catchment areas are escalating flood hazards.",
+            "severity": "HIGH",
+            "status": "pending",
+            "required_wings": [
+                "w_neoc",
+                "w_operations",
+                "w_logistics"
+            ]
+        },
+        {
+            "id": "inj_2",
+            "phase_id": "d_day",
+            "time_offset": "H+6HRS",
+            "title": "Infrastructure Exposure Report",
+            "description": "ARC Exposure data confirms 2.2 million people are in the flood zone. Critical infrastructure at risk includes 30 hospitals, 45 schools, and 18 bridges. Immediate assessment required for these assets.",
+            "severity": "HIGH",
+            "status": "pending",
+            "required_wings": [
+                "w_neoc",
+                "w_assessment"
+            ]
+        }
+    ]
+}

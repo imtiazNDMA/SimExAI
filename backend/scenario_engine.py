@@ -16,8 +16,16 @@ PHASES = [
 class ScenarioEngine:
     """State machine for managing SimEx exercise progression."""
 
-    def __init__(self, scenario_id: str = "earthquake_batagram_7_4"):
+    def __init__(self, scenario_id: str = "earthquake_batagram_7_4", injects_id: str = "earthquake_injects"):
         self.scenario_id = scenario_id
+        self.injects_id = injects_id
+        self.current_phase_index = 0
+        self.scenario_data = self._load_scenario()
+        self.injects_data = self._load_injects()
+
+    def load_scenario(self, scenario_id: str, injects_id: str):
+        self.scenario_id = scenario_id
+        self.injects_id = injects_id
         self.current_phase_index = 0
         self.scenario_data = self._load_scenario()
         self.injects_data = self._load_injects()
@@ -28,18 +36,23 @@ class ScenarioEngine:
             return json.load(f)
 
     def _load_injects(self) -> dict:
-        path = DATA_DIR / "injects" / "earthquake_injects.json"
+        path = DATA_DIR / "injects" / f"{self.injects_id}.json"
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
 
     def get_scenario_info(self) -> dict:
         return {
-            "id": self.scenario_data["id"],
-            "name": self.scenario_data["name"],
-            "type": self.scenario_data["type"],
-            "magnitude": self.scenario_data["magnitude"],
-            "location": self.scenario_data["location"],
-            "impact": self.scenario_data["impact"],
+            "id": self.scenario_data.get("id", self.scenario_id),
+            "name": self.scenario_data.get("name", "Scenario"),
+            "type": self.scenario_data.get("type", "Disaster"),
+            "magnitude": self.scenario_data.get("magnitude", "N/A"),
+            "location": self.scenario_data.get("location", "N/A"),
+            "impact": self.scenario_data.get("impact", "N/A"),
+            "is_uploaded": bool(self.scenario_data.get("is_uploaded")),
+            "source_file": self.scenario_data.get("source_file"),
+            "source_image_count": self.scenario_data.get("source_image_count", 0),
+            "source_visual_page_count": self.scenario_data.get("source_visual_page_count", 0),
+            "source_visual_mode": self.scenario_data.get("source_visual_mode", "none"),
             "current_phase": self.get_current_phase()["id"],
         }
 

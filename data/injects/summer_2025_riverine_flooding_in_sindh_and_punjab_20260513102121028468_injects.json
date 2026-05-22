@@ -1,0 +1,30 @@
+{
+    "injects": [
+        {
+            "id": "inj_1",
+            "phase_id": "d_day",
+            "time_offset": "H+0HRS",
+            "title": "Peak Flood Risk Alert",
+            "description": "Short-term warning of peak flood risk in western river catchments and areas prone to hill torrents of Punjab and Kirthar Range. Max Reservoir Capacity of Tarbela Dam expected in coming days.",
+            "severity": "HIGH",
+            "status": "pending",
+            "required_wings": [
+                "w_neoc",
+                "w_operations"
+            ]
+        },
+        {
+            "id": "inj_2",
+            "phase_id": "d_day",
+            "time_offset": "H+6HRS",
+            "title": "Tarbela Dam Critical Status",
+            "description": "Max Reservoir Level of Tarbela dam is reached. Heavy rains on upper catchment areas and high river flows escalate flood hazards. Localized Cloud burst are likely to happen in Punjab and Kirthar Range hill torrents.",
+            "severity": "CRITICAL",
+            "status": "pending",
+            "required_wings": [
+                "w_operations",
+                "w_logistics"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,31 @@
+{
+    "injects": [
+        {
+            "id": "inj_1",
+            "phase_id": "d_day",
+            "time_offset": "H+2HRS",
+            "title": "Flash Flood Warning: Gilgit-Baltistan",
+            "description": "NCOP DEW data indicates elevated flash flood risk in Gilgit and Hunza river systems. Isolated heavy rainfall combined with accelerated snowmelt is causing rapid rise in river flows. High-intensity flooding expected in narrow valleys.",
+            "severity": "HIGH",
+            "status": "pending",
+            "required_wings": [
+                "w_neoc",
+                "w_operations",
+                "w_weather"
+            ]
+        },
+        {
+            "id": "inj_2",
+            "phase_id": "d_day",
+            "time_offset": "H+4HRS",
+            "title": "Critical Infrastructure Alert: Tarbela Dam",
+            "description": "Riverine flooding scenario in Upper Indus River below Tarbela Dam is active. Exposure calculations show 1.4 million people at risk. Regulated releases from upstream dams combined with local rainfall are increasing flood pressure downstream.",
+            "severity": "CRITICAL",
+            "status": "pending",
+            "required_wings": [
+                "w_operations",
+                "w_infrastructure"
+            ]
+        }
+    ]
+}

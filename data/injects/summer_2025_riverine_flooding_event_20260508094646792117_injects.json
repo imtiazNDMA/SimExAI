@@ -1,0 +1,31 @@
+{
+    "injects": [
+        {
+            "id": "inj_1",
+            "phase_id": "d_day",
+            "time_offset": "H+0HRS",
+            "title": "Peak Flow Alert at Sukkur",
+            "description": "River flows at Sukkur Barrage have reached 500,000 cusecs. Immediate activation of flood control centers in Sukkur, Shikarpur, and Khairpur is required.",
+            "severity": "HIGH",
+            "status": "pending",
+            "required_wings": [
+                "w_operations",
+                "w_neoc",
+                "w_logistics"
+            ]
+        },
+        {
+            "id": "inj_2",
+            "phase_id": "d_day",
+            "time_offset": "H+4HRS",
+            "title": "Tarbela Dam Status",
+            "description": "Tarbela Reservoir has reached maximum capacity due to glacial melt and confluence of western and monsoon disturbances. Emergency spillway operations initiated.",
+            "severity": "HIGH",
+            "status": "pending",
+            "required_wings": [
+                "w_operations",
+                "w_hydel"
+            ]
+        }
+    ]
+}

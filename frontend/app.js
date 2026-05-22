@@ -31,6 +31,8 @@ const injectCount     = $('#inject-count');
 const btnAdvance      = $('#btn-advance-phase');
 const btnBack         = $('#btn-back-phase');
 const btnReset        = $('#btn-reset');
+const btnUploadScenario = $('#btn-upload-scenario');
+const fileInputScenario = $('#scenario-file-input');
 const btnShowActions  = $('#btn-show-actions');
 const actionsModal    = $('#actions-modal');
 const actionsList     = $('#actions-list');
@@ -70,10 +72,17 @@ async function api(path, options = {}) {
 async function init() {
   initTheme();
 
-  const [wingsData, phasesData] = await Promise.all([
+  const [wingsData, phasesData, scenarioData] = await Promise.all([
     api('/wings'),
     api('/phases'),
+    api('/scenario'),
   ]);
+
+  if (scenarioData) {
+    state.scenario = scenarioData;
+    updateHeader();
+    if (!state.activeWing) chatMessages.innerHTML = buildWelcomeHTML();
+  }
 
   if (wingsData) {
     state.wings = wingsData.wings;
@@ -87,6 +96,248 @@ async function init() {
     updateButtonStates();
   }
   await loadInjects();
+}
+
+function updateHeader() {
+  const boxesContainer = document.getElementById('header-scenario-boxes');
+  const boxName = document.getElementById('box-name');
+  const boxType = document.getElementById('box-type');
+  const boxLocation = document.getElementById('box-location');
+  const boxImpact = document.getElementById('box-impact');
+
+  if (!boxesContainer) return;
+
+  if (!state.scenario?.is_uploaded) {
+    boxesContainer.hidden = true;
+    return;
+  }
+
+  const summary = buildScenarioSummary(state.scenario);
+  boxesContainer.hidden = false;
+  setScenarioBoxValue(boxName, summary.name, summary.fullName);
+  setScenarioBoxValue(boxType, summary.type, summary.fullType);
+  setScenarioBoxValue(boxLocation, summary.location, summary.fullLocation);
+  setScenarioBoxValue(boxImpact, summary.impact, summary.fullImpact);
+}
+
+function setScenarioBoxValue(el, value, fullValue) {
+  if (!el) return;
+  const displayValue = value || 'N/A';
+  el.textContent = displayValue;
+  el.title = fullValue || displayValue;
+}
+
+const SUMMARY_STOPWORDS = new Set([
+  'a', 'an', 'and', 'the', 'of', 'for', 'to', 'in', 'on', 'with', 'due', 'by', 'from',
+  'event', 'scenario', 'simulation', 'exercise', 'season', 'summer', 'winter', 'spring',
+  'autumn', 'fall', 'early', 'late'
+]);
+
+function buildScenarioSummary(scenario = {}) {
+  const fullName = flattenScenarioValue(scenario.name);
+  const fullType = flattenScenarioValue(scenario.type);
+  const fullLocation = flattenScenarioValue(scenario.location);
+  const fullImpact = flattenScenarioValue(scenario.impact);
+
+  return {
+    name: summarizeScenarioName(scenario.name),
+    type: summarizeWords(scenario.type, 3, 'Disaster'),
+    location: summarizeLocation(scenario.location),
+    impact: summarizeImpact(scenario.impact),
+    fullName,
+    fullType,
+    fullLocation,
+    fullImpact,
+  };
+}
+
+function summarizeScenarioName(value) {
+  return summarizeWords(value, 4, 'Scenario');
+}
+
+function summarizeWords(value, maxWords, fallback) {
+  const text = normalizeSummaryText(flattenScenarioValue(value));
+  if (!text) return fallback;
+
+  const words = text
+    .replace(/[|/]/g, ' ')
+    .replace(/[^\w\s.+-]/g, ' ')
+    .split(/\s+/)
+    .map(word => word.trim())
+    .filter(Boolean)
+    .filter(word => !/^20\d{2}$/.test(word))
+    .filter(word => !SUMMARY_STOPWORDS.has(word.toLowerCase()));
+
+  const selected = words.length ? words.slice(0, maxWords).join(' ') : text;
+  return toDisplayCase(limitWords(selected, maxWords));
+}
+
+function summarizeLocation(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const parts = [
+      value.district,
+      value.province,
+      value.region,
+      value.country && !value.province ? value.country : '',
+    ].filter(Boolean).map(part => compactLocationName(flattenScenarioValue(part)));
+    const uniqueParts = uniqueNonEmpty(parts).slice(0, 3);
+    if (uniqueParts.length) return uniqueParts.join(', ');
+  }
+
+  const text = normalizeSummaryText(flattenScenarioValue(value));
+  if (!text) return 'Location';
+
+  const withoutDetails = text.replace(/\([^)]*\)/g, ' ');
+  const parts = withoutDetails
+    .split(/[,;]|\band\b/i)
+    .map(part => compactLocationName(part))
+    .filter(part => part && !/specifically/i.test(part));
+
+  const uniqueParts = uniqueNonEmpty(parts).slice(0, 3);
+  return uniqueParts.length ? uniqueParts.join(', ') : limitWords(toDisplayCase(withoutDetails), 4);
+}
+
+function summarizeImpact(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const priorityKeys = [
+      'displaced_population',
+      'estimated_fatalities',
+      'estimated_injuries',
+      'houses_damaged_destroyed',
+      'affected_population',
+    ];
+    for (const key of priorityKeys) {
+      if (value[key]) {
+        const metric = extractMetricPhrase(flattenScenarioValue(value[key]), key);
+        if (metric) return metric;
+      }
+    }
+  }
+
+  const text = normalizeSummaryText(flattenScenarioValue(value));
+  if (!text) return 'Impact';
+
+  const metric = extractMetricPhrase(text);
+  if (metric) return metric;
+
+  return limitWords(
+    text
+      .replace(/\b(widespread|significant|severe|heavy|major|due|to|because|of)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(),
+    5
+  );
+}
+
+function extractMetricPhrase(text, context = '') {
+  const source = normalizeSummaryText(`${context} ${text}`);
+  const metricMatch = source.match(/(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(million|billion|thousand|m|bn|k)?\s+(people|persons|population|residents|families|households|fatalities|injuries|injured|displaced)/i);
+  if (!metricMatch) {
+    const numberMatch = source.match(/(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(?:\s*-\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?))?/);
+    if (!numberMatch) return '';
+
+    const amount = numberMatch[2]
+      ? `${compactNumber(numberMatch[1])}-${compactNumber(numberMatch[2])}`
+      : compactNumber(numberMatch[1]);
+
+    if (/fatal/.test(source)) return `${amount} fatalities`;
+    if (/injur/.test(source)) return `${amount} injured`;
+    if (/displac|evacuat/.test(source)) return `${amount} displaced`;
+    if (/house|home|damage/.test(source)) return `${amount} homes damaged`;
+    if (/affect/.test(source)) return `${amount} people affected`;
+    return '';
+  }
+
+  const amount = compactNumber(metricMatch[1], metricMatch[2]);
+  const noun = metricMatch[3].toLowerCase();
+
+  if (/fatal/.test(source)) return `${amount} fatalities`;
+  if (/injur/.test(source)) return `${amount} injured`;
+  if (/displac|evacuat/.test(source)) return `${amount} displaced`;
+  if (/household|famil/.test(noun)) return `${amount} families affected`;
+  return `${amount} people affected`;
+}
+
+function compactNumber(rawNumber, rawUnit = '') {
+  const unit = String(rawUnit || '').toLowerCase();
+  const normalized = String(rawNumber).replace(/,/g, '');
+  const numeric = Number(normalized);
+
+  if (unit.startsWith('b')) return `${trimTrailingZero(numeric)}B`;
+  if (unit.startsWith('m')) return `${trimTrailingZero(numeric)}M`;
+  if (unit.startsWith('k') || unit.startsWith('thousand')) return `${trimTrailingZero(numeric)}K`;
+
+  if (!Number.isFinite(numeric)) return rawNumber;
+  if (numeric >= 1000000) return `${trimTrailingZero(numeric / 1000000)}M`;
+  if (numeric >= 1000) return `${trimTrailingZero(numeric / 1000)}K`;
+  return String(numeric);
+}
+
+function trimTrailingZero(number) {
+  return Number(number.toFixed(1)).toString();
+}
+
+function compactLocationName(value) {
+  const clean = normalizeSummaryText(value)
+    .replace(/\bKhyber\s+Pakhtunkhwa\b/ig, 'KP')
+    .replace(/\bWestern\s+Punjab\b/ig, 'Punjab')
+    .replace(/\bGilgit[-\s]+Baltistan\b/ig, 'GB')
+    .replace(/\bAzad\s+Jammu\s+and\s+Kashmir\b/ig, 'AJK')
+    .replace(/\bPakistan\b/ig, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return limitWords(toDisplayCase(clean), 3);
+}
+
+function flattenScenarioValue(value) {
+  if (value == null) return '';
+  if (Array.isArray(value)) return value.map(flattenScenarioValue).filter(Boolean).join(', ');
+  if (typeof value === 'object') {
+    return Object.entries(value)
+      .map(([key, nestedValue]) => {
+        const flatValue = flattenScenarioValue(nestedValue);
+        return flatValue ? `${key.replace(/_/g, ' ')} ${flatValue}` : '';
+      })
+      .filter(Boolean)
+      .join(', ');
+  }
+  return String(value);
+}
+
+function normalizeSummaryText(value) {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function limitWords(value, maxWords) {
+  const text = String(value || '').trim();
+  const words = text.split(/\s+/).filter(Boolean);
+  return words.length > maxWords ? words.slice(0, maxWords).join(' ') : text;
+}
+
+function uniqueNonEmpty(values) {
+  const seen = new Set();
+  return values.filter(value => {
+    const key = String(value || '').trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function toDisplayCase(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\b\w/g, char => char.toUpperCase())
+    .replace(/\bKp\b/g, 'KP')
+    .replace(/\bGb\b/g, 'GB')
+    .replace(/\bAjk\b/g, 'AJK')
+    .replace(/\bNdma\b/g, 'NDMA')
+    .replace(/\bLa\b/g, 'La');
 }
 
 // ── Wings ──────────────────────────────────────
@@ -138,12 +389,17 @@ function selectWing(wingId) {
   }
 }
 
-async function sendGreeting(wingId) {
+async function sendGreeting(wingId, isPhaseChange = false) {
   const phaseId = state.currentPhase ? state.currentPhase.id : 'd_day';
   showTypingIndicator();
+  
+  let msgText = isPhaseChange
+    ? `Phase advancement notice: ${state.currentPhase?.label || phaseId}. Brief me on the new phase priorities based on the scenario records. Do not welcome me, do not acknowledge my presence or role again, and do not repeat the exercise title.`
+    : 'hello';
+
   const data = await api('/chat', {
     method: 'POST',
-    body: JSON.stringify({ wing_id: wingId, phase_id: phaseId, message: 'hello' }),
+    body: JSON.stringify({ wing_id: wingId, phase_id: phaseId, message: msgText }),
   });
   hideTypingIndicator();
   if (data) addMessage(wingId, 'system', data.response, data.wing_name);
@@ -188,6 +444,15 @@ function renderMessages() {
 }
 
 function buildWelcomeHTML() {
+  const summary = state.scenario?.is_uploaded ? buildScenarioSummary(state.scenario) : null;
+  const scenarioGrid = summary ? `
+        <div class="welcome-scenario-grid" aria-label="Scenario summary">
+          ${buildWelcomeScenarioBox('Scenario', summary.name)}
+          ${buildWelcomeScenarioBox('Disaster Type', summary.type)}
+          ${buildWelcomeScenarioBox('Location', summary.location)}
+          ${buildWelcomeScenarioBox('Impact', summary.impact)}
+        </div>` : '';
+  
   return `
     <div class="welcome-screen" id="welcome-message">
       <div class="welcome-glow"></div>
@@ -199,9 +464,18 @@ function buildWelcomeHTML() {
         </div>
         <h1 class="welcome-title">SimexAI</h1>
         <p class="welcome-sub">AI-powered disaster simulation platform<br>for NDMA Pakistan</p>
-        <p class="welcome-cta">← Select a wing from the sidebar to begin</p>
+        ${scenarioGrid}
+        <p class="welcome-cta" style="margin-top: 30px;">← Select a wing from the sidebar to begin</p>
       </div>
     </div>`;
+}
+
+function buildWelcomeScenarioBox(label, value) {
+  return `
+          <div class="scenario-box">
+            <span class="scenario-box-label">${escapeHtml(label)}</span>
+            <span class="scenario-box-value">${escapeHtml(value || 'N/A')}</span>
+          </div>`;
 }
 
 function formatText(text) {
@@ -321,7 +595,7 @@ async function applyPhaseUpdate(data, verb) {
     addMessage(state.activeWing.id, 'notification',
       `${verb} **${state.currentPhase.label}** (${state.currentPhase.days})`,
       'Exercise Control');
-    sendGreeting(state.activeWing.id);
+    sendGreeting(state.activeWing.id, true);
   }
   updateButtonStates();
   if (data.message) showToast(data.message);
@@ -498,3 +772,32 @@ function showToast(message) {
 
 // ── Start ──────────────────────────────────────
 init();
+
+
+btnUploadScenario.addEventListener('click', () => { fileInputScenario.click(); });
+fileInputScenario.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    btnUploadScenario.innerHTML = '⏳ Wait... ';
+    btnUploadScenario.disabled = true;
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch('/api/scenario/upload', { method: 'POST', body: formData });
+        const data = await response.json();
+        
+        if (!response.ok || data.message.includes("Failed")) {
+            alert('Error: ' + data.message);
+        } else {
+            alert('Scenario Uploaded & Ingested! ' + data.message);
+            window.location.reload();
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Failed to upload scenario');
+    } finally {
+        btnUploadScenario.innerHTML = 'Upload Scenario';
+        btnUploadScenario.disabled = false;
+        e.target.value = '';
+    }
+});

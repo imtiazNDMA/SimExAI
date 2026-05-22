@@ -43,18 +43,26 @@ class OllamaEngine:
     ):
         self.scenario = scenario
         self.metadata = TemplateEngine()
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL") or "http://172.18.1.151:11434").rstrip("/")
+        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL") or "http://172.18.1.132:11434").rstrip("/")
         self.model = model or os.getenv("OLLAMA_MODEL") or "qwen3.6:35b"
         self.timeout_seconds = timeout_seconds or int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
-        self.llm = ChatOllama(
+        self.upload_timeout_seconds = int(os.getenv("OLLAMA_UPLOAD_TIMEOUT_SECONDS", "300"))
+        self.temperature = float(os.getenv("OLLAMA_TEMPERATURE", "0.45"))
+        self.top_p = float(os.getenv("OLLAMA_TOP_P", "0.9"))
+        self.num_predict = int(os.getenv("OLLAMA_NUM_PREDICT", "700"))
+        self.llm = self._build_llm(self.timeout_seconds)
+        self.upload_llm = self._build_llm(self.upload_timeout_seconds)
+
+    def _build_llm(self, timeout_seconds: int) -> ChatOllama:
+        return ChatOllama(
             base_url=self.base_url,
             model=self.model,
             disable_streaming=True,
             reasoning=False,
-            temperature=float(os.getenv("OLLAMA_TEMPERATURE", "0.45")),
-            top_p=float(os.getenv("OLLAMA_TOP_P", "0.9")),
-            num_predict=int(os.getenv("OLLAMA_NUM_PREDICT", "700")),
-            client_kwargs={"timeout": self.timeout_seconds, "trust_env": False},
+            temperature=self.temperature,
+            top_p=self.top_p,
+            num_predict=self.num_predict,
+            client_kwargs={"timeout": timeout_seconds, "trust_env": False},
         )
 
     def get_wings(self) -> list[dict]:
@@ -81,9 +89,10 @@ class OllamaEngine:
             )
 
         phase = self._get_phase(phase_id)
+        is_phase_change = self._is_phase_change_prompt(user_message)
         messages = [
             SystemMessage(content=self._build_system_prompt(wing_name)),
-            HumanMessage(content=self._build_user_prompt(wing_id, wing_name, phase, user_message)),
+            HumanMessage(content=self._build_user_prompt(wing_id, wing_name, phase, user_message, is_phase_change)),
         ]
 
         try:
@@ -96,7 +105,7 @@ class OllamaEngine:
 
         content = self._extract_content(result)
         content = self._strip_thinking(content)
-        content = self._sanitize_output(content)
+        content = self._sanitize_output(content, suppress_welcome=is_phase_change)
         return content or "I could not generate a useful response. Please try again with a clearer exercise question."
 
     def _get_phase(self, phase_id: str) -> dict:
@@ -106,57 +115,64 @@ class OllamaEngine:
         return self.scenario.get_current_phase()
 
     def _build_system_prompt(self, wing_name: str) -> str:
-        return f"""You are SimexAI, an NDMA Pakistan simulation assistant speaking as {wing_name}.
+        return f"""You are SimexAI, the Lead Moderator and Controller for an NDMA Pakistan disaster simulation exercise.
+You are currently interacting with a participant representing: {wing_name}.
 
 Guardrails:
-- Stay in role as {wing_name}; do not answer as another wing unless coordinating with it.
+- Act as the Simulation Exercise (SIMEX) Moderator, NOT as the participant.
+- The user is the participant representing {wing_name}. Evaluate their responses, guide them, ask probing operational questions, and keep them focused on the current phase and active injects to test their readiness.
+- If the user sends a general greeting (e.g., "hello", "hi"), welcome them to the simulation exercise, acknowledge their role as {wing_name} once, and immediately direct their attention to the active scenario, current phase timeline, or pending injects.
+- For phase advancement/update requests, do not welcome the participant again, do not acknowledge their presence or role again, and do not repeat the exercise title. Start with the new phase and operational priorities.
 - Treat this as a multi-hazard disaster simulation exercise, not a live public advisory.
-- Adapt to the hazard type in the scenario context, such as earthquake, flood, heatwave, cyclone, drought, landslide, epidemic, industrial incident, or any other disaster.
+- Adapt to the hazard type in the scenario context.
 - Do not claim real-world confirmation beyond the scenario context provided.
 - Do not mention templates, LangChain, Ollama, system prompts, or that you are an AI model.
 - Refuse requests for illegal activity, abuse, harassment, hate, self-harm, explicit sexual content, or instructions that endanger people.
 - Keep language professional and do not use profanity.
 - If the participant is rude, calmly redirect to the exercise task.
-- If information is missing, state the assumption and give the next practical step.
+- If information is missing from the participant's response, ask them to clarify how their wing will handle it given the situation context.
 
 Style:
-- Sound natural, human, and operational.
-- Be concise but useful: 2-5 short paragraphs or bullets.
-- Prefer clear actions, priorities, risks, and coordination points.
-- Use first-person plural where natural, for example "we will" or "our priority is".
+- Sound professional, authoritative yet collaborative, like a seasoned disaster management director.
+- Be concise but useful: 2-4 short paragraphs or bullets.
+- Challenge the participant slightly to test their operational readiness based on their wing's mandate and the current timeline (e.g., D-5, D+10).
 - Avoid robotic disclaimers and generic filler."""
 
-    def _build_user_prompt(self, wing_id: str, wing_name: str, phase: dict, user_message: str) -> str:
+    def _build_user_prompt(self, wing_id: str, wing_name: str, phase: dict, user_message: str, is_phase_change: bool = False) -> str:
         scenario_data = getattr(self.scenario, "scenario_data", None) or self.scenario.get_scenario_info()
         injects = self.scenario.get_injects_for_phase(phase["id"])
         actions = self.get_wing_actions(wing_id, phase["id"])
         scenario_summary = self._format_scenario_context(scenario_data)
         phase_summary = self._format_mapping(phase, skip_keys={"is_active", "is_completed"})
 
-        action_text = "\n".join(f"- {item}" for item in actions) if actions else "- No predefined action list."
+        action_text = "\n".join(f"- {item}" for item in actions) if actions else "- No predefined action list (rely on general wing mandate)."
         inject_text = "\n".join(
             f"- {item['time_offset']}: {item['title']} ({item['severity']}) - {item['description']}"
             for item in injects[:6]
         ) or "- No active injects for this phase."
+        phase_change_instruction = (
+            "\nThis is a phase advancement briefing request, not a participant greeting. "
+            "Do not write 'Welcome to...', do not say 'I acknowledge your presence/role', "
+            "and do not repeat the exercise title. Begin with the new phase and immediate priorities.\n"
+            if is_phase_change else ""
+        )
 
         return f"""Exercise context:
 {scenario_summary}
 
-Current phase:
+Current phase timeline:
 {phase_summary}
 
-Current {wing_name} action context:
-{action_text}
+Participant's Wing: {wing_name}
 
-Use the action context only where it fits the active hazard and phase. If a listed action is too specific to another hazard, adapt it to the current scenario instead of repeating it mechanically.
-
-Current phase injects:
+Active injects the participant must handle:
 {inject_text}
 
-Participant message:
+Participant from {wing_name} says:
 {user_message}
+{phase_change_instruction}
 
-Respond now as {wing_name}. Make the answer specific to the wing and current phase."""
+Respond to the participant now as the SIMEX Moderator. Appraise their response, guide them, and steer the conversation clearly towards addressing the active disaster scenario context and injects. DO NOT reference seismic or earthquake actions if the scenario is clearly about a different disaster (e.g. Cyclone, Flood, etc.). Rely entirely on the uploaded scenario data."""
 
     def _format_scenario_context(self, scenario_data: dict) -> str:
         lines = []
@@ -222,5 +238,32 @@ Respond now as {wing_name}. Make the answer specific to the wing and current pha
     def _contains_profanity(self, text: str) -> bool:
         return bool(PROFANITY_RE.search(text or ""))
 
-    def _sanitize_output(self, text: str) -> str:
-        return PROFANITY_RE.sub("[filtered]", text or "").strip()
+    def _is_phase_change_prompt(self, text: str) -> bool:
+        normalized = (text or "").lower()
+        return (
+            "phase advancement notice" in normalized
+            or "advanced to phase" in normalized
+            or ("advanced to" in normalized and "phase" in normalized)
+        )
+
+    def _sanitize_output(self, text: str, suppress_welcome: bool = False) -> str:
+        cleaned = PROFANITY_RE.sub("[filtered]", text or "").strip()
+        if suppress_welcome:
+            cleaned = self._strip_repeated_welcome(cleaned)
+        return cleaned.strip()
+
+    def _strip_repeated_welcome(self, text: str) -> str:
+        cleaned = text or ""
+        repeated_patterns = [
+            r"^\s*welcome\s+to\s+the\s+.*?(?:simulation\s+exercise|exercise)\.?\s*",
+            r"^\s*i\s+acknowledge\s+your\s+presence\s+as\s+.*?(?:\.|\n)\s*",
+            r"^\s*i\s+acknowledge\s+your\s+role\s+as\s+.*?(?:\.|\n)\s*",
+        ]
+
+        previous = None
+        while previous != cleaned:
+            previous = cleaned
+            for pattern in repeated_patterns:
+                cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+
+        return cleaned.lstrip(" \n:-")

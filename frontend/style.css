@@ -220,6 +220,51 @@ html[data-theme="light"] #app::before {
   letter-spacing: -0.02em;
 }
 
+.header-scenario-boxes {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 4px;
+}
+.header-scenario-boxes[hidden] {
+  display: none;
+}
+
+.scenario-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.scenario-box-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.scenario-box-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Center scenario badge */
 .header-center {
   flex: 1;
@@ -811,6 +856,17 @@ html[data-theme="light"] .chat-phase-tag { color: var(--purple); }
   line-height: 1.6;
   max-width: 380px;
 }
+.welcome-scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 8px;
+  width: min(760px, 92vw);
+  margin-top: 4px;
+}
+.welcome-scenario-grid .scenario-box {
+  min-height: 58px;
+  text-align: left;
+}
 .welcome-scenario-pill {
   display: inline-flex;
   align-items: center;
@@ -1296,7 +1352,9 @@ html[data-theme="light"] .inject-severity-tag.low      { color: #047857; }
   }
   .brand-name { display: none; }
   .header-center { display: none; }
+  .header-scenario-boxes { display: none; }
   .ctrl-btn span { display: none; }
+  .welcome-scenario-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* Mobile */
@@ -1327,6 +1385,7 @@ html[data-theme="light"] .inject-severity-tag.low      { color: #047857; }
   .chat-messages { padding: 14px 12px; }
   .welcome-brand-mark { width: 108px; height: 108px; }
   .welcome-title { font-size: 34px; }
+  .welcome-scenario-grid { grid-template-columns: 1fr; width: min(360px, 92vw); }
   .message.system,
   .message.user {
     max-width: 94%;
