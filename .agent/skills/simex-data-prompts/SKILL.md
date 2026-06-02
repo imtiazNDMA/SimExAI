@@ -14,14 +14,14 @@ data/
 ├── scenarios/
 │   └── earthquake_batagram_7_4.json   # Scenario definition
 ├── templates/
-│   └── wing_responses.json            # 10 wings × 5 phases responses
+│   └── wing_responses.json            # 9 wings x 5 phases responses
 ├── injects/
 │   └── earthquake_injects.json        # Timed scenario events
 └── prompts/                           # Future: Ollama prompt templates
     ├── moderator_system.md
     └── wing_personas/
-        ├── tech_early_warning.md
-        ├── ops_wing.md
+        ├── technical_early_warning.md
+        ├── operations_logistic.md
         └── ...
 ```
 
@@ -61,9 +61,9 @@ data/
 ```json
 {
     "wings": {
-        "tech_early_warning": {
-            "name": "Tech Early Warning",
-            "icon": "📡",
+        "technical_early_warning": {
+            "name": "Technical Early Warning Wing (Tech EW)",
+            "icon": "EW",
             "phases": {
                 "d_day": {
                     "greeting": "Tech Early Warning Wing activated...",
@@ -93,7 +93,7 @@ data/
             "title": "Aftershock M5.8",
             "description": "A M5.8 aftershock causes secondary collapse...",
             "severity": "critical",
-            "target_wings": ["ops_wing", "tech_early_warning"],
+            "target_wings": ["operations_logistic", "technical_early_warning"],
             "response_required": true
         }
     ]
@@ -126,9 +126,9 @@ Keywords to support per wing:
 When Ollama is integrated, each wing gets a persona prompt:
 
 ```markdown
-# System Prompt: Ops Wing
+# System Prompt: Operations and Logistic Wing (Ops & Log)
 
-You are the Operations Wing of NDMA Pakistan, responding during 
+You are the Operations and Logistic Wing of NDMA Pakistan, responding during 
 a magnitude 7.4 earthquake simulation exercise in Batagram, KP.
 
 ## Current Phase: {phase_label}

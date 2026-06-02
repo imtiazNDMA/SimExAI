@@ -7,12 +7,13 @@ from pathlib import Path
 import json
 import re
 import shutil
-import tempfile
+import uuid
 
 from .models import ChatRequest, ChatResponse
 from .ollama_engine import OllamaEngine
 from .scenario_engine import PHASES, ScenarioEngine
 from .document_parser import parse_document
+from .mandate import MandateRegistry
 
 
 app = FastAPI(
@@ -38,6 +39,7 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 SCENARIO_DIR = DATA_DIR / "scenarios"
 INJECT_DIR = DATA_DIR / "injects"
 PHASE_IDS = {phase["id"] for phase in PHASES}
+mandates = MandateRegistry()
 
 
 def _slugify(value: str | None, fallback: str = "uploaded_scenario") -> str:
@@ -48,11 +50,15 @@ def _slugify(value: str | None, fallback: str = "uploaded_scenario") -> str:
 def _read_upload_as_context(file: UploadFile) -> dict:
     """Parse an upload through a temporary file and remove it immediately."""
     safe_name = Path(file.filename or "scenario").name
-    with tempfile.TemporaryDirectory(prefix="simexai_upload_", dir=Path(__file__).parent) as tmp_dir:
-        file_path = Path(tmp_dir) / safe_name
+    tmp_dir = Path(__file__).parent / f"simexai_upload_{uuid.uuid4().hex}"
+    tmp_dir.mkdir(parents=True, exist_ok=False)
+    try:
+        file_path = tmp_dir / safe_name
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         return parse_document(file_path)
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def _parse_llm_json(raw_output: str) -> dict:
@@ -101,7 +107,9 @@ def _normalize_injects(injects: list, scenario_id: str) -> list[dict]:
         item["description"] = item.get("description") or "Scenario-derived inject."
         item["severity"] = str(item.get("severity") or "MEDIUM").upper()
         item["status"] = item.get("status") or "pending"
-        item["required_wings"] = item.get("required_wings") or item.get("target_wings") or []
+        item["required_wings"] = mandates.normalize_wing_ids(
+            item.get("required_wings") or item.get("target_wings") or []
+        )
         normalized.append(item)
     return normalized
 
@@ -163,12 +171,14 @@ async def upload_scenario(file: UploadFile = File(...)):
     """Use an uploaded file as LLM context and persist generated JSON only."""
     from langchain_core.messages import HumanMessage, SystemMessage
 
-    system_msg = SystemMessage(content='''You are an expert disaster management planner. 
+    wing_ids = ", ".join(mandates.wings.keys())
+    system_msg = SystemMessage(content=f'''You are an expert disaster management planner. 
 Use the uploaded scenario document as context. Create one scenario summary and phase injects from that document only.
 Use both the extracted text and the attached full-page visual images. The visuals may contain maps, tables, charts, scanned content, diagrams, damage indicators, timelines, captions, and page layout clues that are not present in extracted text.
 Output ONLY valid JSON that matches this structure. No markdown formatting ticks around the JSON.
-{
-  "scenario": {
+Use only these canonical required_wings ids when assigning injects: {wing_ids}.
+{{
+  "scenario": {{
     "id": "generated_from_upload",
     "name": "Generated Scenario",
     "type": "Disaster Type",
@@ -176,16 +186,16 @@ Output ONLY valid JSON that matches this structure. No markdown formatting ticks
     "location": "Location string",
     "impact": "Brief impact description",
     "context": "Context description",
-    "phases": {
+    "phases": {{
         "d_day": "D Day timeframe",
         "d1_to_d5": "Days 1-5 timeframe",
         "d5_to_d10": "Days 5-10 timeframe",
         "d10_to_d20": "Days 10-20 timeframe",
         "d20_to_d50": "Days 20-50 timeframe"
-    }
-  },
+    }}
+  }},
   "injects": [
-    {
+    {{
       "id": "inj_1",
       "phase_id": "d_day",
       "time_offset": "H+2HRS",
@@ -193,11 +203,11 @@ Output ONLY valid JSON that matches this structure. No markdown formatting ticks
       "description": "inject description",
       "severity": "HIGH",
       "status": "pending",
-      "required_wings": ["w_neoc", "w_operations"]
-    },
+      "required_wings": ["technical_early_warning", "operations_logistic"]
+    }},
     ... add some injects spaced out among phase_id "d_day", "d1_to_d5", "d5_to_d10", "d10_to_d20", "d20_to_d50"
   ]
-}''')
+}}''')
     raw_output = "No raw output generated"
 
     try:
@@ -207,7 +217,13 @@ Output ONLY valid JSON that matches this structure. No markdown formatting ticks
         visual_mode = parsed_data.get("visual_mode", "none")
         user_msg = HumanMessage(content=_build_upload_user_content(parsed_data))
 
-        llm_res = responder.upload_llm.invoke([system_msg, user_msg])
+        try:
+            llm_res = responder.upload_llm.invoke([system_msg, user_msg])
+        except Exception as exc:
+            return {
+                "message": f"Failed to process upload: {responder.format_llm_error(exc)}",
+                "phases": scenario.get_all_phases(),
+            }
         raw_output = llm_res.content
         parsed_json = _parse_llm_json(raw_output)
         if not isinstance(parsed_json, dict):
@@ -294,11 +310,13 @@ def go_back_phase():
 
 @app.post("/api/phase/reset")
 def reset_phases():
-    """Reset to D Day."""
-    scenario.reset()
+    """Reset to the default exercise and D Day."""
+    scenario.reset_to_default()
     return {
         "message": "Exercise reset to D Day",
+        "scenario": scenario.get_scenario_info(),
         "phases": scenario.get_all_phases(),
+        "injects": scenario.get_current_injects(),
     }
 
 
@@ -311,11 +329,12 @@ def get_wings():
 @app.get("/api/wings/{wing_id}/actions")
 def get_wing_actions(wing_id: str):
     """Get wing actions for current phase."""
+    canonical_id = responder.normalize_wing_id(wing_id) or wing_id
     phase = scenario.get_current_phase()
-    actions = responder.get_wing_actions(wing_id, phase["id"])
+    actions = responder.get_wing_actions(canonical_id, phase["id"])
     return {
-        "wing_id": wing_id,
-        "wing_name": responder.get_wing_name(wing_id),
+        "wing_id": canonical_id,
+        "wing_name": responder.get_wing_name(canonical_id),
         "phase": phase,
         "actions": actions,
     }
@@ -325,15 +344,16 @@ def get_wing_actions(wing_id: str):
 def chat(request: ChatRequest) -> ChatResponse:
     """Send a message and get a wing-specific response."""
     phase = scenario.get_current_phase()
+    wing_id = responder.normalize_wing_id(request.wing_id) or request.wing_id
     response_text = responder.get_response(
-        wing_id=request.wing_id,
+        wing_id=wing_id,
         phase_id=request.phase_id if request.phase_id else phase["id"],
         user_message=request.message,
     )
 
     return ChatResponse(
-        wing_id=request.wing_id,
-        wing_name=responder.get_wing_name(request.wing_id),
+        wing_id=wing_id,
+        wing_name=responder.get_wing_name(wing_id),
         phase_id=phase["id"],
         phase_label=phase["label"],
         response=response_text,

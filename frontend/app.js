@@ -608,15 +608,18 @@ function updateButtonStates() {
 }
 
 btnReset.addEventListener('click', async () => {
-  if (!confirm('Reset exercise to D Day? All chat history will be cleared.')) return;
+  if (!confirm('Reset exercise to D Day? Chat history and the uploaded scenario summary will be cleared.')) return;
   const data = await api('/phase/reset', { method: 'POST' });
   if (data?.phases) {
     state.phases      = data.phases;
     state.currentPhase = data.phases.find(p => p.is_active);
+    state.scenario     = data.scenario || null;
+    state.injects      = data.injects || [];
     state.messages    = {};
     state.activeWing  = null;
 
     renderTimeline();
+    updateHeader();
     chatMessages.innerHTML = buildWelcomeHTML();
     chatWingName.textContent  = 'Select a Wing';
     chatWingIcon.textContent  = '🎯';
@@ -625,7 +628,8 @@ btnReset.addEventListener('click', async () => {
     btnSend.disabled   = true;
     btnShowActions.disabled = true;
     wingList.querySelectorAll('.wing-item').forEach(el => el.classList.remove('active'));
-    await loadInjects();
+    if (data.injects) renderInjects();
+    else await loadInjects();
     showToast('Exercise reset to D Day');
   }
 });

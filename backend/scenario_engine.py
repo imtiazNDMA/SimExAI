@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
+DEFAULT_SCENARIO_ID = "earthquake_batagram_7_4"
+DEFAULT_INJECTS_ID = "earthquake_injects"
 
 PHASES = [
     {"id": "d_day", "label": "D Day", "days": "Day 0"},
@@ -16,7 +18,7 @@ PHASES = [
 class ScenarioEngine:
     """State machine for managing SimEx exercise progression."""
 
-    def __init__(self, scenario_id: str = "earthquake_batagram_7_4", injects_id: str = "earthquake_injects"):
+    def __init__(self, scenario_id: str = DEFAULT_SCENARIO_ID, injects_id: str = DEFAULT_INJECTS_ID):
         self.scenario_id = scenario_id
         self.injects_id = injects_id
         self.current_phase_index = 0
@@ -83,6 +85,9 @@ class ScenarioEngine:
 
     def reset(self):
         self.current_phase_index = 0
+
+    def reset_to_default(self):
+        self.load_scenario(DEFAULT_SCENARIO_ID, DEFAULT_INJECTS_ID)
 
     def get_injects_for_phase(self, phase_id: str) -> list[dict]:
         return [

@@ -1,0 +1,724 @@
+{
+  "source": {
+    "file": "data/Mandate/mandate.pdf",
+    "description": "NDMA wing mandates extracted from the mandate PDF chapters requested for SimExAI wing behavior.",
+    "required_wings": [
+      "Technical Early Warning Wing (Tech EW)",
+      "National Institute of Disaster Management (NIDM)",
+      "Technical Equipment & Maintenance Wing (Tech E & M)",
+      "Disaster Risk Reduction Wing (DRR)",
+      "Infrastructure Advisory and Project Development Wing (IA&PD)",
+      "Operations and Logistic Wing (Ops & Log)",
+      "Plans Wing",
+      "Regional & Military Collaboration and Media Wing (RM & M)",
+      "International Collaboration Wing (IC)"
+    ]
+  },
+  "phase_groups": {
+    "d_day": "during_disaster",
+    "d1_to_d5": "during_disaster",
+    "d5_to_d10": "post_disaster",
+    "d10_to_d20": "post_disaster",
+    "d20_to_d50": "post_disaster"
+  },
+  "wings": {
+    "technical_early_warning": {
+      "name": "Technical Early Warning Wing (Tech EW)",
+      "short_name": "Tech EW",
+      "abbreviation": "Tech EW",
+      "icon": "EW",
+      "chapter": 1,
+      "source_pages": [9, 10],
+      "mandate_scope": "Global and local hazard monitoring, 6-12 month forecasting, risk analysis, early warning dissemination, risk communication, and AI/GIS-enabled decision support for proactive disaster risk management.",
+      "responsibilities": {
+        "pre_disaster": [
+          "Develop and operate national early warning systems for hydro-meteorological, geological, climatic, and region-specific hazards.",
+          "Produce multi-hazard exposure and risk assessments using geospatial and meteorological datasets.",
+          "Integrate data streams from PMD, SUPARCO, WAPDA, PDMAs, line ministries, and global platforms.",
+          "Issue early warnings, alerts, advisories, and impact-based forecasts with relevant stakeholders.",
+          "Provide technical support for preparedness planning, scenario building, and regional or international simulation exercises.",
+          "Maintain disaster information systems, dashboards, and decision-support tools.",
+          "Build federal and provincial stakeholder capacity on early warning and risk analytics."
+        ],
+        "during_disaster": [
+          "Monitor hazards, impacts, and evolving risk scenarios in real time using available technology platforms and portals.",
+          "Provide early warning updates and risk intelligence to decision-makers.",
+          "Support NEOC and response wings with situational analysis, maps, dashboards, and analytics.",
+          "Integrate field data, satellite imagery, and remote sensing for impact assessment and response prioritization.",
+          "Support inter-agency coordination with timely evidence-based risk and impact information."
+        ],
+        "post_disaster": [
+          "Support damage, loss, and needs assessments using geospatial and analytical tools.",
+          "Analyze early warning performance and data gaps after the event.",
+          "Document lessons learned to improve forecasting models, thresholds, and dissemination mechanisms.",
+          "Enhance national disaster risk databases and historical hazard repositories.",
+          "Support early recovery and resilience planning through risk-informed analytics and modelling."
+        ]
+      },
+      "key_functions": [
+        "Develop, operate, and continuously enhance national early warning and decision-support systems.",
+        "Collect, integrate, and analyze multi-hazard data from national and international sources.",
+        "Generate and disseminate impact-based early warnings, alerts, and advisories.",
+        "Provide real-time technical and analytical support to all NEOC wings during emergencies.",
+        "Create GIS products, dashboards, maps, and situational awareness tools for decision-making.",
+        "Coordinate with federal and provincial departments, PDMAs, research institutions, and development partners.",
+        "Support SimExs, drills, SOPs, guidelines, technical frameworks, and capacity-building on early warning systems."
+      ],
+      "simex_phase_actions": {
+        "d_day": [
+          "Validate the hazard trigger and issue the first impact-based warning to NEOC and stakeholders.",
+          "Publish initial hazard, exposure, and risk maps for operational prioritization.",
+          "Fuse field, satellite, meteorological, and partner data into a common risk picture.",
+          "Brief response wings on immediate secondary hazard risks and uncertainty."
+        ],
+        "d1_to_d5": [
+          "Maintain real-time hazard monitoring and update risk intelligence as impacts evolve.",
+          "Refresh dashboards and maps with field reports, remote sensing, and partner datasets.",
+          "Identify emerging hotspots, access constraints, and cascading hazard risks.",
+          "Provide technical analytics for NEOC coordination and response prioritization."
+        ],
+        "d5_to_d10": [
+          "Support damage, loss, and needs assessments with geospatial analysis.",
+          "Assess early warning system performance, data gaps, and forecast accuracy.",
+          "Refine hazard and exposure layers for early recovery decisions.",
+          "Document lessons for model, threshold, and dissemination improvements."
+        ],
+        "d10_to_d20": [
+          "Produce risk-informed recovery analytics and safe-site guidance.",
+          "Update national hazard databases with verified post-event information.",
+          "Coordinate technical inputs for resilient reconstruction and preparedness planning.",
+          "Prepare post-event technical findings for NEOC and partner review."
+        ],
+        "d20_to_d50": [
+          "Finalize post-event risk analysis and early warning performance reporting.",
+          "Recommend monitoring network, data integration, and dashboard upgrades.",
+          "Archive validated hazard and impact datasets for future planning.",
+          "Support lessons learned and future SimEx design with technical evidence."
+        ]
+      }
+    },
+    "nidm": {
+      "name": "National Institute of Disaster Management (NIDM)",
+      "short_name": "NIDM",
+      "abbreviation": "NIDM",
+      "icon": "NI",
+      "chapter": 2,
+      "source_pages": [33, 34],
+      "mandate_scope": "Capacity building, training, research, knowledge management, disaster archives, lessons learned, and institutional strengthening across the full disaster management cycle.",
+      "responsibilities": {
+        "pre_disaster": [
+          "Update national disaster archives and lessons learned.",
+          "Document and share national and international best practices.",
+          "Task academia, DRR societies, and think tanks for risk communication and responder preparedness.",
+          "Roll out standardized community-based training modules.",
+          "Prepare trained national volunteers in high-risk zones."
+        ],
+        "during_disaster": [
+          "Monitor deployment and performance of trained volunteers and DRR societies.",
+          "Facilitate short-term placement of human resources at disaster sites.",
+          "Support coordination of relief, donations, and early recovery planning.",
+          "Provide technical inputs for real-time decision-making based on early warning and field evidence.",
+          "Engage national and international academia for rapid assessments where required."
+        ],
+        "post_disaster": [
+          "Conduct rapid impact and damage analysis reviews.",
+          "Consolidate field feedback, lessons learned, and response evidence.",
+          "Identify priority research, training, and capacity gaps.",
+          "Issue implementation-focused guidance to national academic institutions."
+        ]
+      },
+      "key_functions": [
+        "Develop annual Academia Best Practices Manuals using national and global disaster knowledge.",
+        "Bridge validated best practices with national and sub-national users.",
+        "Operate the NIDM Think Tank for DRR and resilience inputs.",
+        "Design localized training for communities, public institutions, military, and first responders.",
+        "Coordinate with DRR, Plans, and Operations and Logistic Wing for policy, preparedness, and operational coherence.",
+        "Maintain a trained volunteers database for rapid mobilization and capacity mapping.",
+        "Connect disaster training with national youth, volunteer, and civic engagement initiatives.",
+        "Promote academia-policy-practice linkages through universities and centres of excellence."
+      ],
+      "simex_phase_actions": {
+        "d_day": [
+          "Activate observer, volunteer, and training coordination channels.",
+          "Identify immediate human resource and volunteer support gaps at incident sites.",
+          "Provide evidence-based inputs from early warning and field feedback.",
+          "Start live documentation of coordination, training, and decision bottlenecks."
+        ],
+        "d1_to_d5": [
+          "Track performance of trained volunteers and DRR society deployments.",
+          "Coordinate short-term technical human resources for priority disaster sites.",
+          "Engage academic partners for rapid field assessment support.",
+          "Capture lessons on relief coordination, donations, and early recovery planning."
+        ],
+        "d5_to_d10": [
+          "Consolidate field feedback into a mid-response learning note.",
+          "Identify urgent training gaps affecting relief, camp, or responder performance.",
+          "Support rapid impact and damage analysis reviews with academic inputs.",
+          "Issue targeted guidance to academic and volunteer networks."
+        ],
+        "d10_to_d20": [
+          "Prepare recovery-phase capacity building and institutional learning inputs.",
+          "Document transition challenges and evidence from field operations.",
+          "Recommend training modules for recovery authorities and responders.",
+          "Feed lessons learned into preparedness and response improvement plans."
+        ],
+        "d20_to_d50": [
+          "Finalize after-action learning, training gaps, and research priorities.",
+          "Update national disaster archives and lessons learned repositories.",
+          "Integrate exercise findings into NIDM curricula and volunteer preparedness.",
+          "Publish implementation-focused guidance for academic and public-sector partners."
+        ]
+      }
+    },
+    "tech_equipment_maintenance": {
+      "name": "Technical Equipment & Maintenance Wing (Tech E & M)",
+      "short_name": "Tech E & M",
+      "abbreviation": "Tech E & M",
+      "icon": "EM",
+      "chapter": 3,
+      "source_pages": [40, 41],
+      "mandate_scope": "Digital readiness, real-time data visualization, robust ICT infrastructure, public alert channels, SITREP systems, portals, network resilience, data backup, and maintenance of NDMA technical systems.",
+      "responsibilities": {
+        "pre_disaster": [
+          "Disseminate hazard projections and disaster early warnings through the NDMA website and mobile alert app.",
+          "Maintain a round-the-clock digital environment for domain experts.",
+          "Develop and publish coordination software systems as needs emerge.",
+          "Provide real-time visualization of disaster impacts through portals and NEOC command displays.",
+          "Issue alerts and advisories based on meteorological data and risk assessment.",
+          "Monitor and update SITREP portals for casualties, injuries, and livestock losses.",
+          "Generate automated reports with customizable filters for decision-making.",
+          "Ensure network resilience and backend support for NDMA hardware assets.",
+          "Provide customized and periodic data to other wings for damage and recovery needs assessment.",
+          "Optimize mobile app and website performance during disaster events.",
+          "Secure, archive, and back up disaster datasets, SITREPs, and response logs."
+        ],
+        "during_disaster": [
+          "Keep NEOC technical systems, portals, networks, displays, mobile apps, and websites operational.",
+          "Maintain live dashboards, SITREP tools, and automated reporting for operational decisions.",
+          "Provide technical troubleshooting, data support, and ICT continuity for all wings.",
+          "Protect and back up disaster-related digital records and response logs."
+        ],
+        "post_disaster": [
+          "Archive response datasets, SITREPs, and logs for analysis.",
+          "Evaluate system performance and technical gaps.",
+          "Repair, patch, and optimize platforms based on event behavior.",
+          "Support recovery needs assessment with technical data services."
+        ]
+      },
+      "key_functions": [
+        "Lead NDMA ICT matters and mission-critical IT projects.",
+        "Digitize, automate, and modernize NDMA operations through technology.",
+        "Operate the Pak NDMA Disaster Alert Mobile App for real-time notifications and safety guidance.",
+        "Maintain secure NDMA web platforms with backups and departmental controls.",
+        "Create centralized dashboards for alerts, advisories, and safety messages.",
+        "Operate deployable Mobile Disaster Emergency Operations Centre capability.",
+        "Implement digital attendance, inventory, and asset maintenance systems.",
+        "Strengthen NDMA's technical backbone through secure networks, cloud storage, and real-time data systems."
+      ],
+      "simex_phase_actions": {
+        "d_day": [
+          "Confirm NEOC connectivity, dashboard availability, and alert platform readiness.",
+          "Publish or support immediate digital alerts, SITREPs, and command centre displays.",
+          "Stabilize communication, portal, and backend services for all wings.",
+          "Begin secure backup of incident data and response logs."
+        ],
+        "d1_to_d5": [
+          "Maintain 24/7 ICT, portal, and network support for ongoing operations.",
+          "Repair or replace failed communication, dashboard, or field technical assets.",
+          "Update SITREP, inventory, and reporting tools as operational data changes.",
+          "Provide customized datasets to response, planning, and assessment teams."
+        ],
+        "d5_to_d10": [
+          "Audit system performance and close urgent technical gaps.",
+          "Support damage and recovery needs assessment with data exports and dashboards.",
+          "Patch, optimize, and secure platforms under sustained disaster workload.",
+          "Archive verified response logs and datasets for analysis."
+        ],
+        "d10_to_d20": [
+          "Transition emergency ICT support toward recovery data systems.",
+          "Maintain digital services for compensation, recovery planning, and reporting.",
+          "Document network resilience, uptime, and system failure lessons.",
+          "Recommend technical upgrades for future disaster readiness."
+        ],
+        "d20_to_d50": [
+          "Finalize technical performance, data backup, and system improvement reports.",
+          "Restore, service, and account for deployed technical equipment.",
+          "Update platform, network, and dashboard improvement backlogs.",
+          "Preserve incident datasets for institutional learning and future exercises."
+        ]
+      }
+    },
+    "drr": {
+      "name": "Disaster Risk Reduction Wing (DRR)",
+      "short_name": "DRR",
+      "abbreviation": "DRR",
+      "icon": "DRR",
+      "chapter": 4,
+      "source_pages": [45, 46],
+      "mandate_scope": "Risk-informed preparedness, anticipatory action, inclusive systems, policy coherence, and provincial coordination aligned with NDMP-2026 and National DRR Strategy 2025-2030.",
+      "responsibilities": {
+        "pre_disaster": [
+          "Monitor multi-hazard risk, exposure, and vulnerability with NEOC Tech, line ministries, PDMAs, SDMA, GBDMA, and community systems.",
+          "Strengthen institutional preparedness through inclusive planning, service readiness, guidance, SOPs, and minimum standards.",
+          "Operationalize anticipatory action through hazard and district-specific triggers and early action protocols.",
+          "Support inclusive last-mile dissemination of disaster early warnings to vulnerable populations.",
+          "Use Disaster Needs Calculator outputs and need-gap analyses for preparedness planning."
+        ],
+        "during_disaster": [
+          "Identify protection, access, and inclusion gaps affecting vulnerable groups and family clusters.",
+          "Activate and monitor anticipatory and early actions where lead time exists or impacts are phased.",
+          "Provide policy oversight for consistent application of national DRR frameworks, SOPs, and coordination arrangements.",
+          "Use disaggregated data to guide equitable assistance and protection-sensitive action."
+        ],
+        "post_disaster": [
+          "Conduct post-disaster assessments and learning reviews.",
+          "Review and refine anticipatory action triggers, protocols, and standard action packages.",
+          "Update DRR policies, SOPs, and minimum standards using evidence and lessons learned.",
+          "Integrate findings into preparedness, inclusion measures, and targeting tools."
+        ]
+      },
+      "key_functions": [
+        "Formulate, coordinate, and oversee national DRR and anticipatory action frameworks.",
+        "Develop, update, and issue DRR policies, SOPs, and guidance notes.",
+        "Institutionalize anticipatory action through impact-based triggers, protocols, authorities, and coordination mechanisms.",
+        "Integrate gender, age, disability, and vulnerability considerations across preparedness, early warning, needs modelling, and response support.",
+        "Coordinate with NEOC Tech, PDMAs, SDMA, GBDMA, line ministries, UN agencies, INGOs, NGOs, and community networks.",
+        "Apply and refine needs assessment and modelling tools for equitable targeting and resource use.",
+        "Participate in SimExs and CISEs to test readiness, coordination, and early action systems.",
+        "Conduct post-disaster learning and accountability processes and fold lessons into policy systems."
+      ],
+      "simex_phase_actions": {
+        "d_day": [
+          "Identify priority protection, access, and inclusion gaps from the initial impact picture.",
+          "Check whether anticipatory or early action triggers were met and activate standard action packages.",
+          "Advise NEOC on DRR policy, SOP, and vulnerable group implications.",
+          "Use disaggregated data to guide equitable response priorities."
+        ],
+        "d1_to_d5": [
+          "Monitor implementation of early actions and inclusion measures with provincial and district inputs.",
+          "Refine needs modelling and vulnerability analysis as field data improves.",
+          "Coordinate DRR guidance with line ministries, PDMAs, and community networks.",
+          "Escalate policy, access, and protection gaps affecting response delivery."
+        ],
+        "d5_to_d10": [
+          "Begin post-disaster learning review and assessment consolidation.",
+          "Review anticipatory action triggers, protocols, and targeting effectiveness.",
+          "Update guidance for safer relief sites, vulnerable groups, and equitable assistance.",
+          "Feed evidence into recovery planning and preparedness improvements."
+        ],
+        "d10_to_d20": [
+          "Draft DRR policy, SOP, and minimum-standard refinements from event evidence.",
+          "Integrate inclusion and vulnerability findings into recovery targeting tools.",
+          "Support risk-informed reconstruction and resilience planning.",
+          "Document accountability findings and recommendations."
+        ],
+        "d20_to_d50": [
+          "Finalize DRR learning, anticipatory action, and policy improvement reports.",
+          "Institutionalize updated triggers, protocols, and preparedness standards.",
+          "Update DRR datasets and vulnerability models for future use.",
+          "Prepare SimEx and CISE recommendations for readiness testing."
+        ]
+      }
+    },
+    "infrastructure_advisory_project_development": {
+      "name": "Infrastructure Advisory and Project Development Wing (IA&PD)",
+      "short_name": "IA&PD",
+      "abbreviation": "IA&PD",
+      "icon": "IA",
+      "chapter": 5,
+      "source_pages": [62, 63],
+      "mandate_scope": "Technical advisories, audit frameworks, planning guidance, material hub coordination, infrastructure strengthening, rehabilitation, and resilient rebuilding before, during, and after disasters.",
+      "responsibilities": {
+        "pre_disaster": [
+          "Issue infrastructure awareness advisories for at-risk regions.",
+          "Establish infrastructure audit mechanisms to identify vulnerabilities.",
+          "Set up material hubs for rapid response capability in vulnerable areas.",
+          "Host national seminars on resilient infrastructure.",
+          "Evaluate international best practices for local adaptation.",
+          "Develop region-specific guidance for implementable designs.",
+          "Conduct cost estimation and damage projection for exposed structures."
+        ],
+        "during_disaster": [
+          "Issue immediate infrastructure safety advisories linked with early warning.",
+          "Guide rapid infrastructure surveys through standard templates.",
+          "Provide technical input for temporary protective measures such as drainage clearance and barriers.",
+          "Facilitate release of materials from hubs under approved SOPs.",
+          "Support coordination with PDMAs and DDMAs through technical inputs."
+        ],
+        "post_disaster": [
+          "Support rehabilitation of critical infrastructure using available stocks.",
+          "Support damage assessment and verification.",
+          "Provide technical assistance for debris removal.",
+          "Provide engineering support for temporary camp establishment.",
+          "Facilitate resilient reconstruction and rehabilitation using local resources.",
+          "Coordinate with line departments and provincial authorities for recovery operations."
+        ]
+      },
+      "key_functions": [
+        "Prepare infrastructure advisories and technical guidelines.",
+        "Develop infrastructure audit frameworks and risk assessment tools.",
+        "Plan and coordinate material hubs.",
+        "Support damage assessment and data consolidation.",
+        "Guide resilient reconstruction and Build Back Better approaches.",
+        "Coordinate with PDMAs, line departments, donors, and stakeholders.",
+        "Promote local materials and cost-effective climate-resilient designs."
+      ],
+      "simex_phase_actions": {
+        "d_day": [
+          "Issue immediate infrastructure safety guidance linked to the active warning.",
+          "Prioritize rapid surveys of critical facilities, lifelines, shelters, and access routes.",
+          "Advise on temporary protective measures and urgent material hub use.",
+          "Provide technical inputs to NEOC, PDMAs, and DDMAs for operational decisions."
+        ],
+        "d1_to_d5": [
+          "Run rapid infrastructure surveys using standard templates.",
+          "Verify damage reports and identify unsafe structures or routes.",
+          "Coordinate material release, temporary works, and engineering support for relief operations.",
+          "Consolidate infrastructure damage and risk data for planning."
+        ],
+        "d5_to_d10": [
+          "Support detailed damage assessment, verification, and cost estimation.",
+          "Advise on debris removal, temporary camps, and restoration priorities.",
+          "Develop resilient rehabilitation guidance for critical infrastructure.",
+          "Coordinate recovery technical inputs with line departments and provinces."
+        ],
+        "d10_to_d20": [
+          "Shape the priority project pipeline for resilient reconstruction.",
+          "Apply Build Back Better guidance and local material options.",
+          "Prepare technical briefs for donors, plans, and implementation authorities.",
+          "Refine audit frameworks using verified disaster evidence."
+        ],
+        "d20_to_d50": [
+          "Finalize infrastructure impact, project, and reconstruction guidance reports.",
+          "Recommend long-term resilience investments and audit improvements.",
+          "Close material hub accounting and stock recovery actions.",
+          "Archive damage and infrastructure vulnerability datasets."
+        ]
+      }
+    },
+    "operations_logistic": {
+      "name": "Operations and Logistic Wing (Ops & Log)",
+      "short_name": "Ops & Log",
+      "abbreviation": "Ops & Log",
+      "icon": "OP",
+      "chapter": 6,
+      "source_pages": [68, 69],
+      "mandate_scope": "Response, logistic support, recovery, and rehabilitation functions across pre-disaster preparedness, on-impact operations, and post-impact recovery in accordance with national policies, plans, strategies, and programmes.",
+      "directorates": [
+        "Response Directorate",
+        "Logistics Directorate",
+        "Recovery and Rehabilitation Directorate"
+      ],
+      "responsibilities": {
+        "pre_disaster": [
+          "Prepare mid-term response and contingency plans.",
+          "Issue advisories and alerts.",
+          "Coordinate preparedness measures and simulation exercises.",
+          "Manage procurement, stocking, and international relief preparedness."
+        ],
+        "during_disaster": [
+          "Lead national response, rescue, and evacuation coordination.",
+          "Conduct relief operations including needs, transportation, and distribution.",
+          "Establish relief and medical camps.",
+          "Manage emergency procurements and international relief or assistance."
+        ],
+        "post_disaster": [
+          "Conduct needs assessment.",
+          "Manage ex-gratia assistance and compensation processes.",
+          "Coordinate foreign assistance.",
+          "Lead early recovery measures."
+        ]
+      },
+      "key_functions": [
+        "Formulate, coordinate, and generate national response for any disaster.",
+        "Coordinate and liaise with federal and provincial ministries, departments, armed forces, rescue departments, and PDMAs.",
+        "Formulate response SOPs, guidelines, and contingency plans.",
+        "Participate in SimEx and CISE.",
+        "Issue advisories, alerts, SITREPs, situational updates, and operation progress reports.",
+        "Coordinate conferences, meetings, visits, briefs, and presentations on operations matters.",
+        "Coordinate aviation assets and required support.",
+        "Employ SAR assets within and outside the country.",
+        "Assess needs and coordinate logistic support requirements.",
+        "Provide ex-gratia assistance to disaster affectees.",
+        "Issue tax exemption certificates for relief item import or export by donors, UN agencies, INGOs, and NGOs.",
+        "Redress grievances.",
+        "Coordinate Recovery Needs Assessment with UN and government stakeholders during major disasters or international appeals.",
+        "Coordinate recovery and rehabilitation with INGOs and NGOs through Plans Wing.",
+        "Formulate, update, and implement national stocking policy.",
+        "Maintain national relief reserves and timely replenishment.",
+        "Oversee warehouse receipt, delivery, transportation, storage, security, and emergency action plans.",
+        "Coordinate relief receipts, distribution, allocation, re-allocation, and resource adjustment."
+      ],
+      "simex_phase_actions": {
+        "d_day": [
+          "Activate national response, rescue, evacuation, and relief coordination.",
+          "Issue initial operational SITREP, priorities, and tasking for field response.",
+          "Coordinate aviation, SAR, armed forces, rescue departments, PDMAs, and line departments.",
+          "Start needs tracking, logistic support requests, and relief distribution planning."
+        ],
+        "d1_to_d5": [
+          "Sustain rescue, evacuation, relief distribution, camp, and medical support operations.",
+          "Coordinate transport, warehouses, relief receipts, and resource allocation.",
+          "Publish regular SITREPs and track operational gaps, grievances, and logistics constraints.",
+          "Coordinate emergency procurements and international relief support where required."
+        ],
+        "d5_to_d10": [
+          "Transition from emergency response to needs assessment and sustained relief.",
+          "Manage ex-gratia, compensation, and early recovery coordination inputs.",
+          "Oversee stock drawdown, distribution records, and replenishment needs.",
+          "Support Recovery Needs Assessment and recovery coordination with Plans Wing."
+        ],
+        "d10_to_d20": [
+          "Coordinate early recovery measures, handover, and rehabilitation support.",
+          "Align foreign assistance, donor relief, and operational recovery needs.",
+          "Audit relief distribution, warehouse operations, and transport performance.",
+          "Resolve grievances and support compensation validation."
+        ],
+        "d20_to_d50": [
+          "Finalize operational, relief, logistic, and recovery performance reporting.",
+          "Replenish national reserves and close warehouse/transport accounts.",
+          "Document lessons for SOPs, contingency plans, and future exercises.",
+          "Complete handover to recovery and rehabilitation stakeholders."
+        ]
+      }
+    },
+    "plans": {
+      "name": "Plans Wing",
+      "short_name": "Plans",
+      "abbreviation": "Plans",
+      "icon": "PL",
+      "chapter": 7,
+      "source_pages": [89, 90],
+      "mandate_scope": "Preparedness planning, inter-agency coordination, INSaR readiness, needs analysis, resource mobilization, cluster planning, field deployment, donor engagement, and recovery planning across all phases.",
+      "responsibilities": {
+        "pre_disaster": [
+          "Preparedness and community readiness.",
+          "Coordination and inter-agency planning.",
+          "Search, rescue, and response readiness through INSaR.",
+          "Needs analysis and targeted interventions.",
+          "Resource mobilization and donor engagement.",
+          "Cluster and operational preparedness."
+        ],
+        "during_disaster": [
+          "Activate clusters and field deployments.",
+          "Coordinate with government agencies.",
+          "Support relief and camp management.",
+          "Support INSaR operations.",
+          "Manage needs assessment and information management.",
+          "Mobilize resources and appeals."
+        ],
+        "post_disaster": [
+          "Transition and handover responsibilities.",
+          "Consolidate data and lessons learned.",
+          "Support recovery and shelter.",
+          "Retain human resources and build capacity.",
+          "Support recovery needs and PDNA.",
+          "Sustain relief and resource flow.",
+          "Plan reconstruction and appeals."
+        ]
+      },
+      "key_functions": [
+        "Lead multi-stakeholder preparedness planning with NGOs, INGOs, and INSaR.",
+        "Integrate NGO, INGO, UN, cluster, INSaR, NDMA, PDMA, DDMA, military, law enforcement, and local government plans.",
+        "Ensure INSaR readiness through equipment inspection, deployment planning, logistic support, and area control.",
+        "Activate contingency plans and support coordinated field operations under unified command.",
+        "Coordinate rapid needs assessments and track humanitarian gaps.",
+        "Share response data with authorities, clusters, and donors.",
+        "Engage donors and UN agencies for preparedness, response, and recovery.",
+        "Manage response-to-recovery transition, handovers, shelter rehabilitation, relief flow, PDNA, and recovery planning.",
+        "Recalibrate training, retain technical human resources, and integrate lessons learned."
+      ],
+      "simex_phase_actions": {
+        "d_day": [
+          "Activate contingency plans, coordination platforms, clusters, and INSaR readiness checks.",
+          "Consolidate initial needs, humanitarian gaps, and field deployment priorities.",
+          "Coordinate with government, NGOs, INGOs, UN agencies, military, law enforcement, and local authorities.",
+          "Prepare donor, appeal, and resource mobilization inputs."
+        ],
+        "d1_to_d5": [
+          "Maintain cluster coordination, field deployment, relief, camp, and INSaR support.",
+          "Coordinate rapid needs assessments and information management.",
+          "Track resource gaps, donor inputs, and operational planning priorities.",
+          "Consolidate response data for authorities, clusters, and partners."
+        ],
+        "d5_to_d10": [
+          "Plan transition from response to recovery and handover responsibilities.",
+          "Support PDNA, recovery needs, shelter, and sustained relief planning.",
+          "Engage donors and UN agencies on reconstruction and recovery appeals.",
+          "Capture lessons affecting planning, coordination, and resource flow."
+        ],
+        "d10_to_d20": [
+          "Coordinate recovery planning, reconstruction appeals, and shelter rehabilitation support.",
+          "Align partner workplans with national recovery priorities.",
+          "Retain technical human resources and recalibrate training programs.",
+          "Prepare consolidated planning briefings for senior leadership and partners."
+        ],
+        "d20_to_d50": [
+          "Finalize transition, handover, data consolidation, and planning reports.",
+          "Sustain recovery resource flow and donor coordination.",
+          "Integrate lessons learned into future contingency and cluster plans.",
+          "Close planning inputs for PDNA, reconstruction, and exercise evaluation."
+        ]
+      }
+    },
+    "regional_military_media": {
+      "name": "Regional & Military Collaboration and Media Wing (RM & M)",
+      "short_name": "RM & M",
+      "abbreviation": "RM & M",
+      "icon": "RM",
+      "chapter": 8,
+      "source_pages": [97, 98, 107, 108],
+      "mandate_scope": "Regional and military disaster collaboration, CISEs, liaison with partner countries and military components, global early warning dissemination, and national disaster risk communication through media and digital platforms.",
+      "directorates": [
+        "Regional and Military Collaboration Directorate",
+        "Media Directorate"
+      ],
+      "responsibilities": {
+        "pre_disaster": [
+          "Maintain continuous liaison with disaster management bodies, regional organizations, and military components of friendly countries.",
+          "Sensitize partners about projected hazards.",
+          "Conduct CISE with partner countries and disaster management stakeholders.",
+          "Share post-exercise reports and lessons learned for proactive DRR.",
+          "Develop public risk communication and awareness strategies.",
+          "Disseminate early warning and preparedness messages.",
+          "Coordinate with ministries, media, and telecom operators on emergency communication protocols."
+        ],
+        "during_disaster": [
+          "Share updated disaster early warnings with disaster management stakeholders.",
+          "Sensitize defence attaches and partners about the prevailing situation.",
+          "Share logistic demands when required.",
+          "Coordinate high-end equipment with partner countries.",
+          "Issue centralized real-time crisis communication.",
+          "Share safety instructions and evacuation advisories.",
+          "Coordinate messaging with NDMA, PDMAs, and responders.",
+          "Monitor and counter misinformation and maintain two-way communication with media and communities."
+        ],
+        "post_disaster": [
+          "Share information with disaster management partners.",
+          "Coordinate additional support with Operations and Logistic Wing.",
+          "Coordinate sequential recovery of international support.",
+          "Assimilate realistic disaster data and conduct CISE after-action sharing.",
+          "Communicate damage, relief, and restoration updates.",
+          "Publicize government support and recovery measures.",
+          "Document NDMA response through media content.",
+          "Promote resilience and risk-informed recovery narratives."
+        ]
+      },
+      "key_functions": [
+        "Coordinate and liaise with regional organizations, disaster management bodies, and military components of friendly countries.",
+        "Strengthen cooperation among nations and disaster response agencies.",
+        "Work out joint employment modalities between military components to reduce reaction time.",
+        "Build trust among Pakistan and partner-country disaster response teams.",
+        "Plan and conduct CISE.",
+        "Disseminate global disaster early warning advisories and alerts to regional bodies and military partners.",
+        "Coordinate bilateral and multilateral visits for proactive DRR.",
+        "Formulate and implement national disaster risk communication strategies.",
+        "Issue public advisories, alerts, media briefs, press releases, and situational communication products.",
+        "Monitor and manage disaster misinformation and disinformation.",
+        "Facilitate media coverage, senior leadership briefs, and disaster media archiving."
+      ],
+      "simex_phase_actions": {
+        "d_day": [
+          "Notify regional, military, media, telecom, and partner-country coordination channels.",
+          "Issue the first unified public communication, safety instruction, and media line.",
+          "Coordinate military or partner high-end support requests with operational priorities.",
+          "Start misinformation monitoring and two-way media/community engagement."
+        ],
+        "d1_to_d5": [
+          "Maintain partner, regional, and military liaison on support needs and situation changes.",
+          "Coordinate centralized crisis communication with NDMA, PDMAs, responders, and media.",
+          "Share updated warnings, advisories, public safety content, and verified situation updates.",
+          "Track misinformation and correct false narratives quickly."
+        ],
+        "d5_to_d10": [
+          "Coordinate sequential recovery or redeployment of partner and military support.",
+          "Shift public communication toward relief access, restoration, and government support.",
+          "Document response evidence and partner contributions for institutional learning.",
+          "Prepare after-action inputs for CISE and partner reporting."
+        ],
+        "d10_to_d20": [
+          "Support recovery messaging, compensation awareness, and resilience narratives.",
+          "Coordinate partner lessons, media documentation, and continued support requirements.",
+          "Maintain public trust through transparent official updates and media products.",
+          "Assimilate disaster data into communication and collaboration lessons."
+        ],
+        "d20_to_d50": [
+          "Finalize media, misinformation, partner coordination, and CISE learning reports.",
+          "Archive disaster-related media content and public communication products.",
+          "Share post-event findings with regional, military, and media stakeholders.",
+          "Recommend improvements to emergency communication and collaboration protocols."
+        ]
+      }
+    },
+    "international_collaboration": {
+      "name": "International Collaboration Wing (IC)",
+      "short_name": "IC",
+      "abbreviation": "IC",
+      "icon": "IC",
+      "chapter": 10,
+      "source_pages": [120, 121, 122],
+      "mandate_scope": "International cooperation across pre-impact sensitization, on-impact need-gap analysis and assistance mobilization, and post-impact diplomatic liaison and recovery support.",
+      "responsibilities": {
+        "pre_disaster": [
+          "Sensitize and brief the international community on potential hazards.",
+          "Delineate high-level support required in case of major calamity.",
+          "Expand partnerships with international entities to enhance disaster resilience.",
+          "Prepare stakeholders for potential hazards through early warning systems and capacity-building initiatives."
+        ],
+        "during_disaster": [
+          "Conduct rapid need-gap analysis to identify shortages in national resources, capabilities, and response mechanisms.",
+          "Map and track international resources from foreign governments and international organizations.",
+          "Align available international resources with identified national needs.",
+          "Mobilize pre-coordinated assistance through established agreements and networks."
+        ],
+        "post_disaster": [
+          "Provide diplomatic liaison for affected foreign nationals with embassies for evacuation, medical aid, and repatriation.",
+          "Coordinate international funding, expertise, and resources for rehabilitation.",
+          "Support infrastructure rebuilding and long-term community resilience programs."
+        ]
+      },
+      "key_functions": [
+        "Coordinate measures to address national resource gaps through international cooperation.",
+        "Liaise with federal ministries, including MoFA, and key stakeholders.",
+        "Keep the federal government and parliament updated on evolving situations.",
+        "Handover and manage logistical support.",
+        "Provide diplomatic support.",
+        "Engage Pakistani and foreign missions and diaspora communities.",
+        "Sensitize the global community on national and global hazards including avalanches, heatwaves, forest fires, cyclones, GLOF, landslides, floods, smog, and blizzards.",
+        "Promote risk resilience through international partnerships."
+      ],
+      "simex_phase_actions": {
+        "d_day": [
+          "Assess immediate international assistance needs and national resource gaps.",
+          "Alert MoFA, foreign missions, diaspora channels, and international partners as required.",
+          "Map available international offers, agreements, and deployable support.",
+          "Brief federal stakeholders on international cooperation requirements and constraints."
+        ],
+        "d1_to_d5": [
+          "Mobilize pre-coordinated international assistance against validated gaps.",
+          "Track incoming offers, diplomatic clearances, handover, and logistic support requirements.",
+          "Coordinate with MoFA, missions, donors, and partner organizations.",
+          "Maintain federal and parliamentary situational updates on international support."
+        ],
+        "d5_to_d10": [
+          "Align international resources with relief, recovery, and rehabilitation priorities.",
+          "Coordinate diplomatic support for affected foreign nationals if needed.",
+          "Prepare international funding, expertise, and technical assistance options.",
+          "Document handover, use, and accountability of international assistance."
+        ],
+        "d10_to_d20": [
+          "Coordinate international recovery funding and technical expertise for rehabilitation.",
+          "Engage missions and diaspora communities for targeted resilience support.",
+          "Support infrastructure rebuilding and long-term community resilience partnerships.",
+          "Prepare briefings for government, parliament, and international partners."
+        ],
+        "d20_to_d50": [
+          "Finalize international assistance, funding, and diplomatic support reports.",
+          "Close or transition international support arrangements to recovery programs.",
+          "Capture lessons for future agreements and international disaster cooperation.",
+          "Strengthen global partnership plans for resilience and preparedness."
+        ]
+      }
+    }
+  }
+}

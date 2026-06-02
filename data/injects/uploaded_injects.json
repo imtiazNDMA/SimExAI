@@ -5,12 +5,11 @@
             "phase_id": "d_day",
             "time_offset": "H+0HRS",
             "title": "Meteorological Alert Issued",
-            "description": "National Meteorological Department issues a high-risk alert for heavy precipitation in KP, Western Punjab, and Sindh due to La Ni\u00f1a and Western Disturbance convergence.",
+            "description": "National Meteorological Department issues a high-risk alert for heavy precipitation in KP, Western Punjab, and Sindh due to La Niña and Western Disturbance convergence.",
             "severity": "HIGH",
             "status": "pending",
             "required_wings": [
-                "w_neoc",
-                "w_operations"
+                "operations_logistic"
             ]
         },
         {
@@ -22,8 +21,7 @@
             "severity": "HIGH",
             "status": "pending",
             "required_wings": [
-                "w_operations",
-                "w_logistics"
+                "operations_logistic"
             ]
         },
         {

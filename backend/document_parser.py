@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import base64
 import os
-import tempfile
+import shutil
+import uuid
 from pathlib import Path
 
 import docx
@@ -136,12 +137,16 @@ def _convert_docx_to_pdf_with_word(docx_path: Path, pdf_path: Path) -> None:
 
 
 def _render_docx_pages(docx_path: Path) -> list[dict]:
-    with tempfile.TemporaryDirectory(prefix="simexai_docx_render_", dir=docx_path.parent) as tmp_dir:
-        pdf_path = Path(tmp_dir) / f"{docx_path.stem}.pdf"
+    tmp_dir = docx_path.parent / f"simexai_docx_render_{uuid.uuid4().hex}"
+    tmp_dir.mkdir(parents=True, exist_ok=False)
+    try:
+        pdf_path = tmp_dir / f"{docx_path.stem}.pdf"
         _convert_docx_to_pdf_with_word(docx_path, pdf_path)
         if not pdf_path.exists():
             raise RuntimeError("Microsoft Word did not create a PDF for DOCX vision rendering.")
         return _render_pdf_pages(pdf_path, "DOCX")
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def _result(text: str, image_count: int, vision_images: list[dict]) -> dict:

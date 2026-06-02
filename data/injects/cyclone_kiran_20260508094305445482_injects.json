@@ -9,7 +9,7 @@
             "severity": "LOW",
             "status": "pending",
             "required_wings": [
-                "w_neoc",
+                "operations_logistic",
                 "w_monitoring"
             ]
         },
@@ -18,12 +18,11 @@
             "phase_id": "d_day",
             "time_offset": "H+24HRS",
             "title": "Tropical Depression Confirmation",
-            "description": "Alert B issued: The system has intensified into a Tropical Depression (TD) 692 km from Karachi with wind gusts of 70\u201380 km/h. Trajectory is towards the Sindh coast.",
+            "description": "Alert B issued: The system has intensified into a Tropical Depression (TD) 692 km from Karachi with wind gusts of 70–80 km/h. Trajectory is towards the Sindh coast.",
             "severity": "MEDIUM",
             "status": "pending",
             "required_wings": [
-                "w_neoc",
-                "w_operations"
+                "operations_logistic"
             ]
         }
     ]

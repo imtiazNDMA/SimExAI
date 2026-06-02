@@ -1,0 +1,17 @@
+{
+    "injects": [
+        {
+            "id": "inj_1",
+            "phase_id": "d_day",
+            "time_offset": "H+0HRS",
+            "title": "Flash Flood Risk Alert: Gilgit-Baltistan",
+            "description": "NCOP DEW data indicates 12,103 people exposed in Gilgit-Baltistan catchments. High risk of sudden flow surges in Gilgit and Hunza rivers due to steep terrain and snowmelt. Immediate monitoring required.",
+            "severity": "HIGH",
+            "status": "pending",
+            "required_wings": [
+                "technical_early_warning",
+                "nidm"
+            ]
+        }
+    ]
+}

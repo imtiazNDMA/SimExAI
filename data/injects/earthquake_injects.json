@@ -9,8 +9,8 @@
             "description": "M7.4 earthquake struck at 06:30. Multiple reports of building collapses in Batagram City. Communication lines partially disrupted. District administration requesting immediate federal assistance.",
             "severity": "critical",
             "target_wings": [
-                "ops_wing",
-                "tech_early_warning"
+                "operations_logistic",
+                "technical_early_warning"
             ],
             "response_required": true
         },
@@ -22,9 +22,9 @@
             "description": "A magnitude 5.8 aftershock has caused secondary collapses in Batagram City center. Rescue teams report additional casualties. Building safety becomes critical concern.",
             "severity": "critical",
             "target_wings": [
-                "ops_wing",
-                "tech_early_warning",
-                "infra_audit"
+                "operations_logistic",
+                "technical_early_warning",
+                "infrastructure_advisory_project_development"
             ],
             "response_required": true
         },
@@ -36,8 +36,8 @@
             "description": "Karakoram Highway blocked at 4 points due to massive landslides between Mansehra and Batagram. No road access to district. Air support requested for reconnaissance.",
             "severity": "high",
             "target_wings": [
-                "logistics",
-                "military_media"
+                "operations_logistic",
+                "regional_military_media"
             ],
             "response_required": true
         },
@@ -49,8 +49,8 @@
             "description": "Major fiber-optic backbone cut between Abbottabad and Batagram. Cell towers down in 80% of the district. Emergency satellite communication deployment needed for NEOC.",
             "severity": "high",
             "target_wings": [
-                "tech_e_m",
-                "military_media"
+                "tech_equipment_maintenance",
+                "regional_military_media"
             ],
             "response_required": true
         },
@@ -62,9 +62,9 @@
             "description": "DHQ Batagram courtyard is overwhelmed with casualties. Debris blocking access to emergency ward. Urgent engineering support for site clearance and makeshift structure stabilization.",
             "severity": "critical",
             "target_wings": [
-                "ops_wing",
+                "operations_logistic",
                 "plans",
-                "infra_audit"
+                "infrastructure_advisory_project_development"
             ],
             "response_required": true
         },
@@ -76,7 +76,7 @@
             "description": "NEOC server racks in Batagram damaged by dust and power surges. Internal coordination dashboard is offline. Emergency maintenance required for critical comms hardware.",
             "severity": "high",
             "target_wings": [
-                "tech_e_m"
+                "tech_equipment_maintenance"
             ],
             "response_required": true
         },
@@ -89,7 +89,7 @@
             "severity": "high",
             "target_wings": [
                 "drr",
-                "logistics",
+                "operations_logistic",
                 "plans"
             ],
             "response_required": true
@@ -102,9 +102,9 @@
             "description": "Three international Urban SAR teams (INSARAG classified) have arrived with specialized equipment. Integration into the Sectorized SAR plan required.",
             "severity": "medium",
             "target_wings": [
-                "pcc",
-                "logistics",
-                "ops_wing"
+                "international_collaboration",
+                "plans",
+                "operations_logistic"
             ],
             "response_required": true
         },
@@ -116,9 +116,9 @@
             "description": "Geological assessment indicates imminent slope failure on primary relief route to Alai. Convoy safety compromised. Alternative route or stabilization needed.",
             "severity": "critical",
             "target_wings": [
-                "tech_early_warning",
+                "technical_early_warning",
                 "drr",
-                "logistics"
+                "operations_logistic"
             ],
             "response_required": true
         },
@@ -130,9 +130,9 @@
             "description": "WAPDA reports minor technical anomalies in pressure sensors at Tarbela following a M5.2 aftershock. Joint engineering audit team requested for on-site verification.",
             "severity": "high",
             "target_wings": [
-                "tech_early_warning",
-                "infra_audit",
-                "tech_e_m"
+                "technical_early_warning",
+                "infrastructure_advisory_project_development",
+                "tech_equipment_maintenance"
             ],
             "response_required": true
         },
@@ -144,8 +144,8 @@
             "description": "Satellite link at Forward Operational Base (FOB) showing degradation. Critical for coordinating airlift operations. Tech E&M team needed for uplink realignment.",
             "severity": "medium",
             "target_wings": [
-                "tech_e_m",
-                "military_media"
+                "tech_equipment_maintenance",
+                "regional_military_media"
             ],
             "response_required": true
         },
@@ -158,8 +158,7 @@
             "severity": "high",
             "target_wings": [
                 "plans",
-                "pcc",
-                "infra_audit"
+                "infrastructure_advisory_project_development"
             ],
             "response_required": true
         },
@@ -172,7 +171,7 @@
             "severity": "medium",
             "target_wings": [
                 "plans",
-                "infra_audit",
+                "infrastructure_advisory_project_development",
                 "drr"
             ],
             "response_required": true
@@ -185,9 +184,9 @@
             "description": "Liaison with commercial banks for biometric compensation disbursement. Tech E&M to ensure data link stability at district hubs for smooth processing.",
             "severity": "medium",
             "target_wings": [
-                "pcc",
-                "tech_e_m",
-                "military_media"
+                "plans",
+                "tech_equipment_maintenance",
+                "regional_military_media"
             ],
             "response_required": true
         },
@@ -199,9 +198,8 @@
             "description": "Detailed engineering audit finalized for 1,200 public buildings. Estimated budget PKR 95 billion for resilience-weighted reconstruction. Submission to Finance Division.",
             "severity": "medium",
             "target_wings": [
-                "infra_audit",
-                "plans",
-                "pcc"
+                "infrastructure_advisory_project_development",
+                "plans"
             ],
             "response_required": true
         },
@@ -214,7 +212,7 @@
             "severity": "low",
             "target_wings": [
                 "nidm",
-                "tech_e_m"
+                "tech_equipment_maintenance"
             ],
             "response_required": true
         },
@@ -226,9 +224,9 @@
             "description": "50 high-priority bridge and road reconstruction projects approved for donor funding. Structural standards finalized to withstand M8.0 events.",
             "severity": "medium",
             "target_wings": [
-                "infra_audit",
+                "infrastructure_advisory_project_development",
                 "drr",
-                "pcc"
+                "plans"
             ],
             "response_required": true
         }

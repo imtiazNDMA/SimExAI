@@ -1,6 +1,7 @@
 import json
-import tempfile
+import shutil
 import unittest
+import uuid
 from pathlib import Path
 from unittest.mock import patch
 
@@ -57,7 +58,7 @@ class FakeUploadLLM:
                         "description": "Use observed visual map evidence from the uploaded page.",
                         "severity": "HIGH",
                         "status": "pending",
-                        "required_wings": ["w_neoc"],
+                        "required_wings": ["operations_logistic"],
                     }
                 ],
             }
@@ -83,8 +84,10 @@ class UploadVisionEndpointTests(unittest.TestCase):
             app_module.scenario.get_all_phases = lambda: []
             app_module.scenario.get_current_injects = lambda: []
 
-            with tempfile.TemporaryDirectory() as tmp_dir:
-                tmp = Path(tmp_dir)
+            temp_root = Path(__file__).resolve().parents[1] / ".test_tmp"
+            tmp = temp_root / uuid.uuid4().hex
+            tmp.mkdir(parents=True, exist_ok=True)
+            try:
                 app_module.SCENARIO_DIR = tmp / "scenarios"
                 app_module.INJECT_DIR = tmp / "injects"
                 pdf_path = tmp / "sample.pdf"
@@ -115,6 +118,12 @@ class UploadVisionEndpointTests(unittest.TestCase):
                     scenario_data = json.loads(scenario_path.read_text(encoding="utf-8"))
                     self.assertEqual(scenario_data["source_visual_page_count"], 1)
                     self.assertEqual(scenario_data["source_visual_mode"], "full_page")
+            finally:
+                shutil.rmtree(tmp, ignore_errors=True)
+                try:
+                    temp_root.rmdir()
+                except OSError:
+                    pass
         finally:
             app_module.SCENARIO_DIR = original_scenario_dir
             app_module.INJECT_DIR = original_inject_dir

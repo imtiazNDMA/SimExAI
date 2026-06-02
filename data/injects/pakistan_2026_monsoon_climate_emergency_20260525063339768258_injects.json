@@ -1,0 +1,17 @@
+{
+    "injects": [
+        {
+            "id": "inj_1",
+            "phase_id": "d_day",
+            "time_offset": "H+0HRS",
+            "title": "Elevated Flash Flood Risk in Gilgit-Baltistan",
+            "description": "Meteorological outlook indicates elevated flash flood risk in Gilgit-Baltistan (Gilgit and Hunza river systems) due to monsoon moisture extension and glacial melt. Visuals show 12,103 people exposed in the upper catchments with 432km of roads at risk.",
+            "severity": "HIGH",
+            "status": "pending",
+            "required_wings": [
+                "technical_early_warning",
+                "nidm"
+            ]
+        }
+    ]
+}

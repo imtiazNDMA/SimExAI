@@ -43,7 +43,9 @@ class OllamaEngine:
     ):
         self.scenario = scenario
         self.metadata = TemplateEngine()
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL") or "http://172.18.1.132:11434").rstrip("/")
+        self.base_url = self._normalize_base_url(
+            base_url or os.getenv("OLLAMA_BASE_URL") or "http://172.18.1.132:11434"
+        )
         self.model = model or os.getenv("OLLAMA_MODEL") or "qwen3.6:35b"
         self.timeout_seconds = timeout_seconds or int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
         self.upload_timeout_seconds = int(os.getenv("OLLAMA_UPLOAD_TIMEOUT_SECONDS", "300"))
@@ -65,6 +67,24 @@ class OllamaEngine:
             client_kwargs={"timeout": timeout_seconds, "trust_env": False},
         )
 
+    def _normalize_base_url(self, value: str) -> str:
+        base_url = str(value or "").strip().rstrip("/")
+        for suffix in ("/api/chat", "/api/generate", "/api"):
+            if base_url.endswith(suffix):
+                return base_url[: -len(suffix)].rstrip("/")
+        return base_url
+
+    def format_llm_error(self, exc: Exception) -> str:
+        detail = str(exc)
+        hint = ""
+        if "Unexpected endpoint or method" in detail:
+            hint = (
+                " The configured OLLAMA_BASE_URL does not appear to be an Ollama root URL. "
+                "Set OLLAMA_BASE_URL to the Ollama server root, for example http://localhost:11434, "
+                "not a FastAPI, OpenAI-compatible, or /api/chat URL."
+            )
+        return f"Ollama model {self.model} at {self.base_url} failed: {detail}.{hint}".strip()
+
     def get_wings(self) -> list[dict]:
         return self.metadata.get_wings()
 
@@ -77,7 +97,14 @@ class OllamaEngine:
     def get_wing_actions(self, wing_id: str, phase_id: str) -> list[str]:
         return self.metadata.get_wing_actions(wing_id, phase_id)
 
+    def get_wing_mandate(self, wing_id: str, phase_id: str) -> str:
+        return self.metadata.get_wing_mandate(wing_id, phase_id)
+
+    def normalize_wing_id(self, wing_id: str | None) -> str | None:
+        return self.metadata.normalize_wing_id(wing_id)
+
     def get_response(self, wing_id: str, phase_id: str, user_message: str) -> str:
+        wing_id = self.normalize_wing_id(wing_id) or wing_id
         wing_name = self.get_wing_name(wing_id)
         if wing_name == wing_id:
             return f"Unknown wing: {wing_id}"
@@ -91,7 +118,7 @@ class OllamaEngine:
         phase = self._get_phase(phase_id)
         is_phase_change = self._is_phase_change_prompt(user_message)
         messages = [
-            SystemMessage(content=self._build_system_prompt(wing_name)),
+            SystemMessage(content=self._build_system_prompt(wing_name, wing_id, phase_id)),
             HumanMessage(content=self._build_user_prompt(wing_id, wing_name, phase, user_message, is_phase_change)),
         ]
 
@@ -100,7 +127,7 @@ class OllamaEngine:
         except Exception as exc:
             return (
                 f"{wing_name} AI is currently unable to reach the Ollama model "
-                f"({self.model}) at {self.base_url}. Backend detail: {exc}"
+                f"({self.model}) at {self.base_url}. Backend detail: {self.format_llm_error(exc)}"
             )
 
         content = self._extract_content(result)
@@ -114,9 +141,13 @@ class OllamaEngine:
                 return phase
         return self.scenario.get_current_phase()
 
-    def _build_system_prompt(self, wing_name: str) -> str:
+    def _build_system_prompt(self, wing_name: str, wing_id: str, phase_id: str) -> str:
+        mandate = self.get_wing_mandate(wing_id, phase_id)
         return f"""You are SimexAI, the Lead Moderator and Controller for an NDMA Pakistan disaster simulation exercise.
 You are currently interacting with a participant representing: {wing_name}.
+
+Use this wing mandate as the primary role boundary for all guidance:
+{mandate}
 
 Guardrails:
 - Act as the Simulation Exercise (SIMEX) Moderator, NOT as the participant.
@@ -142,6 +173,7 @@ Style:
         scenario_data = getattr(self.scenario, "scenario_data", None) or self.scenario.get_scenario_info()
         injects = self.scenario.get_injects_for_phase(phase["id"])
         actions = self.get_wing_actions(wing_id, phase["id"])
+        mandate = self.get_wing_mandate(wing_id, phase["id"])
         scenario_summary = self._format_scenario_context(scenario_data)
         phase_summary = self._format_mapping(phase, skip_keys={"is_active", "is_completed"})
 
@@ -164,6 +196,9 @@ Current phase timeline:
 {phase_summary}
 
 Participant's Wing: {wing_name}
+
+Wing mandate and functions:
+{mandate}
 
 Active injects the participant must handle:
 {inject_text}

@@ -87,15 +87,15 @@ class OllamaEngine:
 ```json
 // POST /api/chat
 {
-    "wing_id": "ops_wing",
+    "wing_id": "operations_logistic",
     "phase_id": "d_day",
     "message": "What is the current situation?"
 }
 
 // Response
 {
-    "wing_id": "ops_wing",
-    "wing_name": "Ops Wing",
+    "wing_id": "operations_logistic",
+    "wing_name": "Operations and Logistic Wing (Ops & Log)",
     "phase_id": "d_day",
     "response": "NEOC activated to 24/7 operations. First SitRep issued...",
     "timestamp": "2026-03-05T06:30:00Z"

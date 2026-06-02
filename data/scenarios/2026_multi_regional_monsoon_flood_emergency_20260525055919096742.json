@@ -1,0 +1,21 @@
+{
+    "id": "2026_multi_regional_monsoon_flood_emergency_20260525055919096742",
+    "name": "2026 Multi-Regional Monsoon Flood Emergency",
+    "type": "Hydro-Meteorological Disaster (Riverine and Flash Flooding)",
+    "magnitude": "High (Climate Emergency)",
+    "location": "Nationwide Pakistan (Gilgit-Baltistan, Khyber Pakhtunkhwa, Punjab, Sindh, Balochistan)",
+    "impact": "Widespread inundation affecting 1.4 million+ people in Punjab alone, with critical exposure to infrastructure (bridges, dams, roads) and agriculture (cotton, rice, sugarcane) across multiple provinces. High risk of isolation in Gilgit-Baltistan and Balochistan.",
+    "context": "Pakistan faces its fifth consecutive above-normal monsoon season (July-September 2026), creating a climate emergency. Weakened embankments from previous years are unable to withstand cumulative pressure. The scenario involves a mix of rapid flash floods in the north (Gilgit-Baltistan, KP) due to cloudbursts and snowmelt, and prolonged riverine flooding in the south (Punjab, Sindh) due to upstream releases and flat terrain. Visual data indicates significant exposure in the Tarbela Dam catchment, Ravi River, and Sulaiman Range.",
+    "phases": {
+        "d_day": "June to mid-July 2026: Elevated flash flood risk in Gilgit-Baltistan and Northern KP. Initial heavy rainfall events.",
+        "d1_to_d5": "Late July: Intense monsoon bursts in Punjab and KP. Rapid rise in river levels in Upper Indus and Ravi systems.",
+        "d5_to_d10": "August: Peak riverine flooding in Sindh and Southern Punjab. Dera Ismail Khan and Tarbela Dam areas under high stress.",
+        "d10_to_d20": "Late August: Prolonged waterlogging in Sindh. Compounded impacts in Balochistan due to hill torrents.",
+        "d20_to_d50": "September: Receding waters but continued high risk of disease and infrastructure failure. Long-term recovery planning."
+    },
+    "is_uploaded": true,
+    "source_file": "Internal Simulation Excercise.docx",
+    "source_image_count": 16,
+    "source_visual_page_count": 10,
+    "source_visual_mode": "full_page"
+}

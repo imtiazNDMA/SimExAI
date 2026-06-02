@@ -1,678 +1,820 @@
 {
   "wings": {
-    "tech_early_warning": {
-      "name": "Tech Early Warning",
-      "icon": "📡",
+    "technical_early_warning": {
+      "name": "Technical Early Warning Wing (Tech EW)",
+      "icon": "EW",
       "phases": {
         "d_day": {
-          "greeting": "Tech Early Warning Wing activated. M7.4 seismic event confirmed in Batagram. Analyzing initial shakemaps.",
+          "greeting": "Technical Early Warning Wing (Tech EW) activated for D Day. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Generate initial Shakemaps",
-            "Broadcast seismic alerts to NEOC",
-            "Coordinate earthquake parameters with PMD",
-            "Activate local siren systems"
+            "Validate the hazard trigger and issue the first impact-based warning to NEOC and stakeholders.",
+            "Publish initial hazard, exposure, and risk maps for operational prioritization.",
+            "Fuse field, satellite, meteorological, and partner data into a common risk picture.",
+            "Brief response wings on immediate secondary hazard risks and uncertainty."
           ],
           "responses": {
-            "status": "INITIAL ASSESSMENT: M7.4 verified. Intensity VIII at epicenter. Real-time monitoring of aftershocks in the Alai-Batagram axis.",
-            "shakemap": "Shakemap indicates a 45km rupture length. Highest damage probability in northern Batagram and Alai tehsils.",
-            "default": "Monitoring seismic sensors and refining impact maps based on incoming data."
+            "status": "Technical Early Warning Wing (Tech EW) is tracking D Day priorities: Validate the hazard trigger and issue the first impact-based warning to NEOC and stakeholders.",
+            "actions": "Current mandated actions: Validate the hazard trigger and issue the first impact-based warning to NEOC and stakeholders; Publish initial hazard, exposure, and risk maps for operational prioritization; Fuse field, satellite, meteorological, and partner data into a common risk picture; Brief response wings on immediate secondary hazard risks and uncertainty.",
+            "resources": "Technical Early Warning Wing (Tech EW) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Technical Early Warning Wing (Tech EW) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Technical Early Warning Wing (Tech EW) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Technical Early Warning Wing (Tech EW) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d1_to_d5": {
-          "greeting": "Tech EW monitoring aftershock sequence. Satellite landslide detection active.",
+          "greeting": "Technical Early Warning Wing (Tech EW) activated for D+1 to D+5. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Daily aftershock trend analysis",
-            "Identify co-seismic landslide clusters",
-            "Verify seismic sensor health in field",
-            "Update Intensity maps with field reports"
+            "Maintain real-time hazard monitoring and update risk intelligence as impacts evolve.",
+            "Refresh dashboards and maps with field reports, remote sensing, and partner datasets.",
+            "Identify emerging hotspots, access constraints, and cascading hazard risks.",
+            "Provide technical analytics for NEOC coordination and response prioritization."
           ],
           "responses": {
-            "status": "Aftershock frequency remains high. Recorded 3 events >M5.0. Landslide monitoring shows 25 major blockages on secondary roads.",
-            "default": "Continuous seismic monitoring to ensure SAR team safety."
+            "status": "Technical Early Warning Wing (Tech EW) is tracking D+1 to D+5 priorities: Maintain real-time hazard monitoring and update risk intelligence as impacts evolve.",
+            "actions": "Current mandated actions: Maintain real-time hazard monitoring and update risk intelligence as impacts evolve; Refresh dashboards and maps with field reports, remote sensing, and partner datasets; Identify emerging hotspots, access constraints, and cascading hazard risks; Provide technical analytics for NEOC coordination and response prioritization.",
+            "resources": "Technical Early Warning Wing (Tech EW) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Technical Early Warning Wing (Tech EW) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Technical Early Warning Wing (Tech EW) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Technical Early Warning Wing (Tech EW) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d5_to_d10": {
-          "greeting": "Technical hazard analysis. Dam and bridge seismic stress audit coordination.",
+          "greeting": "Technical Early Warning Wing (Tech EW) activated for D+5 to D+10. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Seismic stress audit for Tarbela Dam",
-            "Micro-seismic monitoring in Alai",
-            "Geological risk assessment for relief camps"
+            "Support damage, loss, and needs assessments with geospatial analysis.",
+            "Assess early warning system performance, data gaps, and forecast accuracy.",
+            "Refine hazard and exposure layers for early recovery decisions.",
+            "Document lessons for model, threshold, and dissemination improvements."
           ],
           "responses": {
-            "status": "Tarbela Dam sensors stable. Micro-seismic units deployed to high-risk zones. Camps verified safe from landslide run-out.",
-            "default": "Providing technical risk data to the planning and logistics teams."
+            "status": "Technical Early Warning Wing (Tech EW) is tracking D+5 to D+10 priorities: Support damage, loss, and needs assessments with geospatial analysis.",
+            "actions": "Current mandated actions: Support damage, loss, and needs assessments with geospatial analysis; Assess early warning system performance, data gaps, and forecast accuracy; Refine hazard and exposure layers for early recovery decisions; Document lessons for model, threshold, and dissemination improvements.",
+            "resources": "Technical Early Warning Wing (Tech EW) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Technical Early Warning Wing (Tech EW) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Technical Early Warning Wing (Tech EW) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Technical Early Warning Wing (Tech EW) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d10_to_d20": {
-          "greeting": "Transition to recovery risk modeling. Revising hazard zoning.",
+          "greeting": "Technical Early Warning Wing (Tech EW) activated for D+10 to D+20. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Analyze ground motion amplification data",
-            "Draft updated hazard zone maps for Batagram",
-            "Identify safe terrain for transitional housing"
+            "Produce risk-informed recovery analytics and safe-site guidance.",
+            "Update national hazard databases with verified post-event information.",
+            "Coordinate technical inputs for resilient reconstruction and preparedness planning.",
+            "Prepare post-event technical findings for NEOC and partner review."
           ],
           "responses": {
-            "status": "Ground motion data mapped. Alai tehsil requires higher seismic design factors (Z4+) for reconstruction.",
-            "default": "Finalizing data sets for long-term recovery planning."
+            "status": "Technical Early Warning Wing (Tech EW) is tracking D+10 to D+20 priorities: Produce risk-informed recovery analytics and safe-site guidance.",
+            "actions": "Current mandated actions: Produce risk-informed recovery analytics and safe-site guidance; Update national hazard databases with verified post-event information; Coordinate technical inputs for resilient reconstruction and preparedness planning; Prepare post-event technical findings for NEOC and partner review.",
+            "resources": "Technical Early Warning Wing (Tech EW) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Technical Early Warning Wing (Tech EW) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Technical Early Warning Wing (Tech EW) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Technical Early Warning Wing (Tech EW) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d20_to_d50": {
-          "greeting": "Post-EQ technical review. Proposing monitoring network upgrades.",
+          "greeting": "Technical Early Warning Wing (Tech EW) activated for D+20 to D+50. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Final seismic impact report",
-            "National hazard map revision",
-            "Monitoring station upgrade plan"
+            "Finalize post-event risk analysis and early warning performance reporting.",
+            "Recommend monitoring network, data integration, and dashboard upgrades.",
+            "Archive validated hazard and impact datasets for future planning.",
+            "Support lessons learned and future SimEx design with technical evidence."
           ],
           "responses": {
-            "status": "Seismic Impact Report finalized. 5 new permanent monitoring stations proposed for Hazara division.",
-            "default": "Concluding technical monitoring phase for the Batagram event."
-          }
-        }
-      }
-    },
-    "ops_wing": {
-      "name": "Ops Wing",
-      "icon": "🎯",
-      "phases": {
-        "d_day": {
-          "greeting": "Ops Wing NEOC Operational. Deploying NDRT and Urban SAR units to impact zone.",
-          "actions": [
-            "Mobilize 2 NDRT teams",
-            "Establish Forward Command Post in Batagram",
-            "Coordinate with Military for heavy airlift",
-            "Sectorize Batagram City for SAR"
-          ],
-          "responses": {
-            "status": "SAR ACTIVE: 4 units on-site. Sectorized search in progress. Focused on collapsed schools and high-density urban clusters.",
-            "default": "Managing the tactical response to maximize life-saving interventions."
-          }
-        },
-        "d1_to_d5": {
-          "greeting": "Intensive Search and Rescue. Managing international team integration.",
-          "actions": [
-            "Manage 15 SAR units (Domestic + Intl)",
-            "Coordinate air medevac for critical injuries",
-            "Publish 6-hourly SitReps",
-            "Task debris clearance for SAR access"
-          ],
-          "responses": {
-            "status": "SAR 70% complete in urban areas. 1,200 casualties confirmed. 600 rescues successful. Focus moving to rural Alai clusters.",
-            "default": "Operational tempo remains high to utilize the 72-96 hour 'Golden Window'."
-          }
-        },
-        "d5_to_d10": {
-          "greeting": "Transitioning to sustained relief operations. Relief camp oversight.",
-          "actions": [
-            "Oversee camp security coordination",
-            "Process field relief requests",
-            "Coordinate airlift for isolated Alai valleys"
-          ],
-          "responses": {
-            "status": "Relief ops dominant. 12 camps established for 45,000 survivors. Supply drops active where roads remain blocked.",
-            "default": "Coordinating field operations to ensure sustained survival in disaster zones."
-          }
-        },
-        "d10_to_d20": {
-          "greeting": "Scaling down SAR assets. Early recovery coordination.",
-          "actions": [
-            "Demobilize SAR units",
-            "Facilitate compensation survey teams",
-            "Plan handover to local recovery authorities"
-          ],
-          "responses": {
-            "status": "International teams demobilizing. Shift to damage survey and compensation validation.",
-            "default": "Managing the operational transition from emergency rescue to early recovery."
-          }
-        },
-        "d20_to_d50": {
-          "greeting": "Recovery oversight and After-Action coordination.",
-          "actions": [
-            "Final SITREP publication",
-            "Consolidated SAR audit",
-            "Lessons learned operational input"
-          ],
-          "responses": {
-            "status": "Ops phase concluding. Finalizing documentation of all field engagements. 100% of target zones verified.",
-            "default": "Maintaining oversight of final recovery fieldwork."
-          }
-        }
-      }
-    },
-    "logistics": {
-      "name": "Logistics",
-      "icon": "🚚",
-      "phases": {
-        "d_day": {
-          "greeting": "Logistics Wing activated. Emergency stocks being dispatched from regional warehouses.",
-          "actions": [
-            "Dispatch 5k tents from Sihala",
-            "Activate commercial transport contracts",
-            "Establish Mansehra Logistics Hub",
-            "Task fuel tankers for emergency generators"
-          ],
-          "responses": {
-            "status": "HUB STATUS: Mansehra depot initialized. 50 truck fleet ready. KKH blockages being bypassed via secondary routes.",
-            "default": "Securing the supply chain to move vital relief goods to the front lines."
-          }
-        },
-        "d1_to_d5": {
-          "greeting": "Supply pipeline in full effect. Reaching 'Last Mile' via coordinated hubs.",
-          "actions": [
-            "Manage 'Last Mile' delivery to camps",
-            "Coordinate heli-slings for food drops",
-            "Track all inventory via digital portal",
-            "Procure emergency water treatment units"
-          ],
-          "responses": {
-            "status": "LOGS ACTIVE: 10,000 food packs delivered. 3 heli-pads operational for Alai supplies. Inventory digital tracking at 100%.",
-            "default": "Moving essential food, water, and non-food items (NFIs) to affected populations."
-          }
-        },
-        "d5_to_d10": {
-          "greeting": "Sustained relief logistics. Warehousing and cold chain management.",
-          "actions": [
-            "Manage 3 regional relief hubs",
-            "Facilitate donor-contributed aid intake",
-            "Maintain water-bowser supply chain",
-            "Logistics support for field hospitals"
-          ],
-          "responses": {
-            "status": "Supply chain stabilized. 500 tons of flour and 200 tons of pulses delivered to 15 distribution points.",
-            "default": "Ensuring the steady flow of life-sustaining supplies during the relief phase."
-          }
-        },
-        "d10_to_d20": {
-          "greeting": "Transitioning to recovery logistics. Reconstruction material procurement.",
-          "actions": [
-            "Procure corrugated iron sheets",
-            "Contract transport for reconstruction rubble removal",
-            "Audit emergency equipment rentals"
-          ],
-          "responses": {
-            "status": "Procurement for transitional shelter starting. 30,000 CGI sheets ordered. Rubble removal logic in planning.",
-            "default": "Pivoting logistics from emergency relief to reconstruction support."
-          }
-        },
-        "d20_to_d50": {
-          "greeting": "Stock replenishment and final logistics audit.",
-          "actions": [
-            "Replenish national warehouses",
-            "Audit reconstruction supply chain",
-            "Final logistics performance report"
-          ],
-          "responses": {
-            "status": "Audit complete. 65% of national stocks replenished. Master log report submitted to Chairman.",
-            "default": "Concluding the emergency logistics operation for Batagram."
-          }
-        }
-      }
-    },
-    "drr": {
-      "name": "Disaster Risk Reduction (DRR)",
-      "icon": "🛡️",
-      "phases": {
-        "d_day": {
-          "greeting": "DRR Wing active. Rapid risk and building failure assessment.",
-          "actions": [
-            "Deploy risk assessment teams",
-            "Issue aftershock safety guidelines",
-            "Identify hazardous buildings for demolition"
-          ],
-          "responses": {
-            "status": "ASSESSMENT: 45% of surveyed buildings unusable. Red/Yellow tagging started in urban core.",
-            "default": "Identifying risks to prevent secondary casualties from collapsing structures."
-          }
-        },
-        "d1_to_d5": {
-          "greeting": "Detailed hazard mapping. Camp site safety verification.",
-          "actions": [
-            "Mapping landslide hotspots",
-            "Audit shelter sites for seismic safety",
-            "Community risk awareness campaign"
-          ],
-          "responses": {
-            "status": "DRR MAPS: 12 potential landslide zones identified on KKH. All 10 camp sites audited and cleared for safety.",
-            "default": "Mapping the evolving hazard landscape to protect survivors and responders."
-          }
-        },
-        "d5_to_d10": {
-          "greeting": "Vulnerability analysis for recovery planning. Mainstreaming DRR.",
-          "actions": [
-            "District vulnerability report",
-            "Safe reconstruction zone identification",
-            "CBDRM training for camp leaders"
-          ],
-          "responses": {
-            "status": "Vulnerability report identifies 12,000 families in high-risk zones needing relocation or specific Z5 designs.",
-            "default": "Ensuring that the recovery plan addresses underlying vulnerabilities."
-          }
-        },
-        "d10_to_d20": {
-          "greeting": "Seismic-safe construction training. 'Build Back Better' guidelines.",
-          "actions": [
-            "Draft seismic construction protocols",
-            "Train 500 local masons",
-            "Certify transitional housing designs"
-          ],
-          "responses": {
-            "status": "TRAINING: 250 masons certified in seismic-tie beams and safe masonry. Guidelines shared with Infra Audit wing.",
-            "default": "Embedding resilience into the reconstruction DNA of Batagram."
-          }
-        },
-        "d20_to_d50": {
-          "greeting": "Finalizing the Resilient Batagram Strategy.",
-          "actions": [
-            "BBB Strategy for Batagram",
-            "Finalize multi-hazard district plan",
-            "Institutionalize community hazard monitors"
-          ],
-          "responses": {
-            "status": "Resilient Batagram Strategy finalized. Integrated into Provincial DRR agenda.",
-            "default": "Concluding the strategic risk reduction framework for the district."
-          }
-        }
-      }
-    },
-    "plans": {
-      "name": "Plans Wing",
-      "icon": "🗺️",
-      "phases": {
-        "d_day": {
-          "greeting": "Plans Wing — Strategic Coordination initiated. Drafting Crisis Resource Management (CRM) Framework.",
-          "actions": [
-            "Develop initial CRM framework",
-            "Coordinate inter-wing resource mapping",
-            "Prepare strategic brief for federal cabinet",
-            "Establish planning liaison with PDMA KP"
-          ],
-          "responses": {
-            "status": "PLANNING: CRM Draft 1 active. Identifying federal-provincial resource gaps. Coordinating airlift priorities.",
-            "default": "Focusing on the high-level strategy and resource mobilization for the earthquake response."
-          }
-        },
-        "d1_to_d5": {
-          "greeting": "Plans Wing — Refined response strategy. Inter-agency coordination.",
-          "actions": [
-            "Update CRM strategic objectives",
-            "Consolidate wing implementation plans",
-            "Identify international aid requirements",
-            "Monitor strategic KPIs"
-          ],
-          "responses": {
-            "status": "STRATEGY: Integrated response plan active. Priority: Reaching isolated high-altitude clusters within 48 hours.",
-            "default": "Maintaining strategic alignment across all responding wings."
-          }
-        },
-        "d5_to_d10": {
-          "greeting": "Strategic transition to recovery. Needs assessment oversight.",
-          "actions": [
-            "Draft Early Recovery Framework",
-            "Strategic brief for donor coordination",
-            "Identify funding gaps for reconstruction"
-          ],
-          "responses": {
-            "status": "RECOVERY PLAN: Multi-sectoral assessment initiated. Estimating $500M reconstruction requirement.",
-            "default": "Planning the shift from emergency lifesaving to sustainable recovery."
-          }
-        },
-        "d10_to_d20": {
-          "greeting": "Formulating the Reconstruction Master Plan.",
-          "actions": [
-            "Consolidate Reconstruction & Rehab (R&R) Framework",
-            "Coordinate international donor conference",
-            "Design M&E system for recovery projects"
-          ],
-          "responses": {
-            "status": "MASTER PLAN: R&R framework in draft. 15 core sectors identified for priority funding.",
-            "default": "Building the roadmap for the long-term rebuilding of Batagram."
-          }
-        },
-        "d20_to_d50": {
-          "greeting": "Strategic oversight handover and SimEx finalization.",
-          "actions": [
-            "Consolidated SimEx final report",
-            "Strategic policy recommendations",
-            "Transition to Reconstruction Authority"
-          ],
-          "responses": {
-            "status": "FINAL STRATEGY: 30 policy improvements identified. Recovery Authority operationalized with our strategy.",
-            "default": "Concluding the strategic planning phase of the SimEx."
-          }
-        }
-      }
-    },
-    "pcc": {
-      "name": "Provincial Coordination Cell (PCC)",
-      "icon": "🏛️",
-      "phases": {
-        "d_day": {
-          "greeting": "PCC active. Facilitating federal support to PDMA KP.",
-          "actions": [
-            "Joint Command protocol with PDMA KP",
-            "Mobilize provincial assets via DDMA",
-            "Facilitate federal asset entry permits",
-            "Authorize inter-district aid movement"
-          ],
-          "responses": {
-            "status": "COORDINATION: 24/7 link with KP NEOC. PDMA KP assets moving to Batagram alongside NDMA. Joint briefing protocols active.",
-            "default": "Ensuring a unified command structure between Federal and Provincial authorities."
-          }
-        },
-        "d1_to_d5": {
-          "greeting": "PCC — Managing bulk resource transfer and inter-provincial support.",
-          "actions": [
-            "Monitor federal-to-provincial asset flow",
-            "Coordinate regional mutual aid (Punjab/Sindh to KP)",
-            "Manage NGO field access permissions"
-          ],
-          "responses": {
-            "status": "RESOURCES: Authorized 150 trucks of aid from Punjab for KP distribution. Clearing data sync between NDMA and PDMA dashboard.",
-            "default": "Supporting the provincial government in scaling up and managing external aid."
-          }
-        },
-        "d5_to_d10": {
-          "greeting": "Provincial capacity auditing and gap bridging.",
-          "actions": [
-            "Coordinate high-level Fed-Prov review",
-            "Audit relief distribution at district level",
-            "Resolve inter-departmental logistics disputes"
-          ],
-          "responses": {
-            "status": "PCC STATUS: Resolved 3 logistics bottlenecks at provincial borders. Monitoring equitable distribution across 5 affected tehsils.",
-            "default": "Maintaining inter-governmental harmony and operational efficiency."
-          }
-        },
-        "d10_to_d20": {
-          "greeting": "PCC — Transition to recovery governance coordination.",
-          "actions": [
-            "Coordinate provincial R&R body activation",
-            "Monitor compensation data integrity",
-            "Identify provincial policy gaps in recovery"
-          ],
-          "responses": {
-            "status": "GOVERNANCE: Facilitating biometric data sharing between NADRA and PDMA for compensation disbursements.",
-            "default": "Ensuring the provincial recovery authority has the federal support it needs."
-          }
-        },
-        "d20_to_d50": {
-          "greeting": "PCC — Final coordination audit and R&R handover.",
-          "actions": [
-            "Final coordination performance report",
-            "Audit utilization of federal grants by province",
-            "Archive provincial case studies"
-          ],
-          "responses": {
-            "status": "Final report submitted. Coordination flow rated 'High Efficiency'. Audit confirms PKR 10B utilized for relief.",
-            "default": "Concluding inter-governmental coordination for the Batagram response."
-          }
-        }
-      }
-    },
-    "tech_e_m": {
-      "name": "Tech E & M",
-      "icon": "⚙️",
-      "phases": {
-        "d_day": {
-          "greeting": "Technical Equipment and Maintenance (Tech E&M) Wing mobilized. Restoring NEOC connectivity and radio networks.",
-          "actions": [
-            "Deploy mobile satellite comms trailers",
-            "Activate emergency VHF/HF radio network",
-            "Technical check of Batagram NEOC servers",
-            "Establish backup data links via Starlink/Satellite"
-          ],
-          "responses": {
-            "status": "TECH STATUS: Primary fiber link cut. Deploying 3 SATCOM units. VHF repeaters being re-aligned for full district coverage.",
-            "comms": "Radio network active on 155.450MHz. Satellite backup at 90% stability. Establishing ICT-hub for SAR teams.",
-            "default": "Ensuring robust communication channels and technical equipment functionality for the response."
-          }
-        },
-        "d1_to_d5": {
-          "greeting": "Tech E&M — Sustaining communication backbone. Equipment maintenance.",
-          "actions": [
-            "Maintain 24/7 radio dispatch for SAR ops",
-            "Repair damaged field comms equipment",
-            "Technical support for digital SitRep tools",
-            "Optimize satellite bandwidth for video reconnaissance"
-          ],
-          "responses": {
-            "status": "MAINTENANCE: 45 handheld radios repaired. Satellite bandwidth tripled for real-time drone feeds. NEOC technical uptime 99.8%.",
-            "default": "Keeping the technical systems running so coordination remains seamless."
-          }
-        },
-        "d5_to_d10": {
-          "greeting": "Advanced technical systems deployment. Information infrastructure integrity.",
-          "actions": [
-            "Deploy solar-powered radio repeaters",
-            "Technical audit of camp data centers",
-            "Establish public information kiosks (low-tech digital)"
-          ],
-          "responses": {
-            "status": "TECH UPGRADE: 5 solar repeaters deployed to Alai for isolated SAR comms. District ICT hub providing internet for relief agencies.",
-            "default": "Maintaining specialized electronic equipment and long-range communication links."
-          }
-        },
-        "d10_to_d20": {
-          "greeting": "Transition to permanent technical infrastructure repair.",
-          "actions": [
-            "Support PTCL for permanent fiber repair",
-            "Upgrade district NEOC server infrastructure",
-            "Maintenance of biometric compensation terminals"
-          ],
-          "responses": {
-            "status": "RESTORATION: Permanent fiber optic link 60% repaired. Biometric terminals technical support 24/7. ICT systems being hardened.",
-            "default": "Pivoting from emergency comms to permanent technical network restoration."
-          }
-        },
-        "d20_to_d50": {
-          "greeting": "Final technical audit and equipment overhaul.",
-          "actions": [
-            "Final ICT performance report",
-            "Equipment maintenance and warehouse return",
-            "Proposing future technical redundancies"
-          ],
-          "responses": {
-            "status": "Final report highlights need for 3 extra satellite trailers. 100% of field electronics serviced and returned to central pool.",
-            "default": "Concluding the technical equipment and maintenance mission for Batagram."
-          }
-        }
-      }
-    },
-    "military_media": {
-      "name": "Regional Military and Media Wing",
-      "icon": "📢",
-      "phases": {
-        "d_day": {
-          "greeting": "Military & Media Wing active. Managing the information space and military SAR liaison.",
-          "actions": [
-            "Broadcast initial public safety bulletins",
-            "ISPR coordination for military SAR assets",
-            "Activate social media rumor-control team",
-            "Hourly media SitReps"
-          ],
-          "responses": {
-            "status": "INFO OPS: Media center established. Military Helis integrated into Ops plan. Countering rumors of dam breach on social media.",
-            "default": "Managing the public narrative and coordinating high-value military assets."
-          }
-        },
-        "d1_to_d5": {
-          "greeting": "Military & Media — Information dominance and public awareness.",
-          "actions": [
-            "Organize pool media visits to SAR sectors",
-            "Coordinate military airlift for heavy gear",
-            "Run radio safety broadcasts",
-            "Fact-check social media reports"
-          ],
-          "responses": {
-            "status": "MEDIA: 80 positive national placements. ISPR briefing held at 14:00. Radio outreach reaching 85% of affected district via FM transponders.",
-            "default": "Ensuring accurate information flow while showcasing the response effort."
-          }
-        },
-        "d5_to_d10": {
-          "greeting": "Media focus shifting to relief visibility and donor engagement.",
-          "actions": [
-            "Produce human-interest documentary content",
-            "Coordinate VIP and Donor media tours",
-            "Launch 'Hope after Quake' campaign"
-          ],
-          "responses": {
-            "status": "VISIBILITY: Highlighting civil-military synergy. Donor documentary 50% filmed. Managing expectations via radio broadcasts.",
-            "default": "Maintaining public and international support for the ongoing relief operation."
-          }
-        },
-        "d10_to_d20": {
-          "greeting": "Informing the recovery phase. Compensation awareness.",
-          "actions": [
-            "Campaign on 'Biometric Payment' procedures",
-            "Broadcast construction safety standards",
-            "Transparency monitoring via media"
-          ],
-          "responses": {
-            "status": "AWARENESS: Compensation explainer videos reaching 1M views. Focus: 'Build resilience, build seismic-safe'.",
-            "default": "Using media channels to support orderly transition into the recovery phase."
-          }
-        },
-        "d20_to_d50": {
-          "greeting": "Post-event documentation and institutional memory.",
-          "actions": [
-            "Final communications audit report",
-            "Archive documented human-interest stories",
-            "Produce 'Lessons Learned' media brief"
-          ],
-          "responses": {
-            "status": "METRICS: Final media report confirms 92% positive sentiment. All communication goals achieved successfully.",
-            "default": "Preserving the story of the Batagram response for future exercises."
+            "status": "Technical Early Warning Wing (Tech EW) is tracking D+20 to D+50 priorities: Finalize post-event risk analysis and early warning performance reporting.",
+            "actions": "Current mandated actions: Finalize post-event risk analysis and early warning performance reporting; Recommend monitoring network, data integration, and dashboard upgrades; Archive validated hazard and impact datasets for future planning; Support lessons learned and future SimEx design with technical evidence.",
+            "resources": "Technical Early Warning Wing (Tech EW) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Technical Early Warning Wing (Tech EW) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Technical Early Warning Wing (Tech EW) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Technical Early Warning Wing (Tech EW) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         }
       }
     },
     "nidm": {
       "name": "National Institute of Disaster Management (NIDM)",
-      "icon": "🎓",
+      "icon": "NI",
       "phases": {
         "d_day": {
-          "greeting": "NIDM active. Deploying real-time observers to document high-intensity response.",
+          "greeting": "National Institute of Disaster Management (NIDM) activated for D Day. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Observers embedded in NEOC",
-            "Activate training for camp volunteers",
-            "Real-time documentation of decision-making"
+            "Activate observer, volunteer, and training coordination channels.",
+            "Identify immediate human resource and volunteer support gaps at incident sites.",
+            "Provide evidence-based inputs from early warning and field feedback.",
+            "Start live documentation of coordination, training, and decision bottlenecks."
           ],
           "responses": {
-            "status": "OBSERVATION: 4 teams on-site. Documenting inter-wing coordination. Identifying immediate training needs in field command.",
-            "default": "Capturing live institutional learning during the most critical 72 hours."
+            "status": "National Institute of Disaster Management (NIDM) is tracking D Day priorities: Activate observer, volunteer, and training coordination channels.",
+            "actions": "Current mandated actions: Activate observer, volunteer, and training coordination channels; Identify immediate human resource and volunteer support gaps at incident sites; Provide evidence-based inputs from early warning and field feedback; Start live documentation of coordination, training, and decision bottlenecks.",
+            "resources": "National Institute of Disaster Management (NIDM) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "National Institute of Disaster Management (NIDM) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "National Institute of Disaster Management (NIDM) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "National Institute of Disaster Management (NIDM) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d1_to_d5": {
-          "greeting": "Field training and coordination auditing.",
+          "greeting": "National Institute of Disaster Management (NIDM) activated for D+1 to D+5. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Conduct first-aid and camp training for locals",
-            "Interim report on SAR coordination bottlenecks",
-            "Document relief distribution logistics"
+            "Track performance of trained volunteers and DRR society deployments.",
+            "Coordinate short-term technical human resources for priority disaster sites.",
+            "Engage academic partners for rapid field assessment support.",
+            "Capture lessons on relief coordination, donations, and early recovery planning."
           ],
           "responses": {
-            "status": "TRAINING: 150 local volunteers trained. Interim report highlights need for better data sync at transit points.",
-            "default": "Improving the live response through documentation and targeted field training."
+            "status": "National Institute of Disaster Management (NIDM) is tracking D+1 to D+5 priorities: Track performance of trained volunteers and DRR society deployments.",
+            "actions": "Current mandated actions: Track performance of trained volunteers and DRR society deployments; Coordinate short-term technical human resources for priority disaster sites; Engage academic partners for rapid field assessment support; Capture lessons on relief coordination, donations, and early recovery planning.",
+            "resources": "National Institute of Disaster Management (NIDM) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "National Institute of Disaster Management (NIDM) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "National Institute of Disaster Management (NIDM) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "National Institute of Disaster Management (NIDM) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d5_to_d10": {
-          "greeting": "Mid-exercise After-Action Review (AAR) and relief audit.",
+          "greeting": "National Institute of Disaster Management (NIDM) activated for D+5 to D+10. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Host mid-term lessons learned workshop",
-            "Audit relief distribution efficiency",
-            "Document civil-military coordination patterns"
+            "Consolidate field feedback into a mid-response learning note.",
+            "Identify urgent training gaps affecting relief, camp, or responder performance.",
+            "Support rapid impact and damage analysis reviews with academic inputs.",
+            "Issue targeted guidance to academic and volunteer networks."
           ],
           "responses": {
-            "status": "AAR: Mid-term review complete. Identified 12 immediate coordination improvements. Relief audit 80% finished.",
-            "default": "Translating field observations into organizational improvements during the exercise."
+            "status": "National Institute of Disaster Management (NIDM) is tracking D+5 to D+10 priorities: Consolidate field feedback into a mid-response learning note.",
+            "actions": "Current mandated actions: Consolidate field feedback into a mid-response learning note; Identify urgent training gaps affecting relief, camp, or responder performance; Support rapid impact and damage analysis reviews with academic inputs; Issue targeted guidance to academic and volunteer networks.",
+            "resources": "National Institute of Disaster Management (NIDM) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "National Institute of Disaster Management (NIDM) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "National Institute of Disaster Management (NIDM) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "National Institute of Disaster Management (NIDM) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d10_to_d20": {
-          "greeting": "Developing recovery-phase capacity building programs.",
+          "greeting": "National Institute of Disaster Management (NIDM) activated for D+10 to D+20. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Formulate training for recovery authorities",
-            "Document transition challenges and best practices",
-            "Publish interim AAR report"
+            "Prepare recovery-phase capacity building and institutional learning inputs.",
+            "Document transition challenges and evidence from field operations.",
+            "Recommend training modules for recovery authorities and responders.",
+            "Feed lessons learned into preparedness and response improvement plans."
           ],
           "responses": {
-            "status": "DATA: AAR Draft 1 submitted. Recovery workshop for PDMA and District officials scheduled.",
-            "default": "Preparing the human resource capacity for long-term reconstruction."
+            "status": "National Institute of Disaster Management (NIDM) is tracking D+10 to D+20 priorities: Prepare recovery-phase capacity building and institutional learning inputs.",
+            "actions": "Current mandated actions: Prepare recovery-phase capacity building and institutional learning inputs; Document transition challenges and evidence from field operations; Recommend training modules for recovery authorities and responders; Feed lessons learned into preparedness and response improvement plans.",
+            "resources": "National Institute of Disaster Management (NIDM) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "National Institute of Disaster Management (NIDM) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "National Institute of Disaster Management (NIDM) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "National Institute of Disaster Management (NIDM) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d20_to_d50": {
-          "greeting": "Final After-Action Report and curriculum integration.",
+          "greeting": "National Institute of Disaster Management (NIDM) activated for D+20 to D+50. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Final Comprehensive AAR",
-            "Submit policy-change recommendations",
-            "Update National SimEx curriculum"
+            "Finalize after-action learning, training gaps, and research priorities.",
+            "Update national disaster archives and lessons learned repositories.",
+            "Integrate exercise findings into NIDM curricula and volunteer preparedness.",
+            "Publish implementation-focused guidance for academic and public-sector partners."
           ],
           "responses": {
-            "status": "FINAL REPORT: 300-page AAR finalized. Lessons integrated into the 2026/27 national training cycle.",
-            "default": "Closing the loop on institutional learning and future preparedness."
+            "status": "National Institute of Disaster Management (NIDM) is tracking D+20 to D+50 priorities: Finalize after-action learning, training gaps, and research priorities.",
+            "actions": "Current mandated actions: Finalize after-action learning, training gaps, and research priorities; Update national disaster archives and lessons learned repositories; Integrate exercise findings into NIDM curricula and volunteer preparedness; Publish implementation-focused guidance for academic and public-sector partners.",
+            "resources": "National Institute of Disaster Management (NIDM) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "National Institute of Disaster Management (NIDM) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "National Institute of Disaster Management (NIDM) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "National Institute of Disaster Management (NIDM) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         }
       }
     },
-    "infra_audit": {
-      "name": "Infra Audit and Project Development Wing",
-      "icon": "🏗️",
+    "tech_equipment_maintenance": {
+      "name": "Technical Equipment & Maintenance Wing (Tech E & M)",
+      "icon": "EM",
       "phases": {
         "d_day": {
-          "greeting": "Infra Audit Wing active. Structural assessment teams deployed to Batagram.",
+          "greeting": "Technical Equipment & Maintenance Wing (Tech E & M) activated for D Day. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Assess 10 critical public buildings",
-            "Audit Thakot Bridge structural integrity",
-            "Cooperate with PEC for volunteer engineers",
-            "Tag buildings as Red/Yellow/Green for safety"
+            "Confirm NEOC connectivity, dashboard availability, and alert platform readiness.",
+            "Publish or support immediate digital alerts, SITREPs, and command centre displays.",
+            "Stabilize communication, portal, and backend services for all wings.",
+            "Begin secure backup of incident data and response logs."
           ],
           "responses": {
-            "status": "AUDIT: DHQ Hospital assessed; courtyard is safe but wing B is Red-tagged. Thakot bridge verified as stable for trucks.",
-            "default": "Performing immediate structural checks to identify safe spaces for emergency operations."
+            "status": "Technical Equipment & Maintenance Wing (Tech E & M) is tracking D Day priorities: Confirm NEOC connectivity, dashboard availability, and alert platform readiness.",
+            "actions": "Current mandated actions: Confirm NEOC connectivity, dashboard availability, and alert platform readiness; Publish or support immediate digital alerts, SITREPs, and command centre displays; Stabilize communication, portal, and backend services for all wings; Begin secure backup of incident data and response logs.",
+            "resources": "Technical Equipment & Maintenance Wing (Tech E & M) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Technical Equipment & Maintenance Wing (Tech E & M) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Technical Equipment & Maintenance Wing (Tech E & M) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Technical Equipment & Maintenance Wing (Tech E & M) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d1_to_d5": {
-          "greeting": "Sector-wise Infrastructure Damage Assessment (IDA) in progress.",
+          "greeting": "Technical Equipment & Maintenance Wing (Tech E & M) activated for D+1 to D+5. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Audit 500+ buildings in city center",
-            "Forensic analysis of structural failures",
-            "Support Tech E&M with cabling duct checks"
+            "Maintain 24/7 ICT, portal, and network support for ongoing operations.",
+            "Repair or replace failed communication, dashboard, or field technical assets.",
+            "Update SITREP, inventory, and reporting tools as operational data changes.",
+            "Provide customized datasets to response, planning, and assessment teams."
           ],
           "responses": {
-            "status": "IDA: 350 houses surveyed. 60% Red-tagged. High masonry failure rate observed. Engineering teams mapping collapse patterns.",
-            "default": "Providing clear safety signals to the community through systematic building tagging."
+            "status": "Technical Equipment & Maintenance Wing (Tech E & M) is tracking D+1 to D+5 priorities: Maintain 24/7 ICT, portal, and network support for ongoing operations.",
+            "actions": "Current mandated actions: Maintain 24/7 ICT, portal, and network support for ongoing operations; Repair or replace failed communication, dashboard, or field technical assets; Update SITREP, inventory, and reporting tools as operational data changes; Provide customized datasets to response, planning, and assessment teams.",
+            "resources": "Technical Equipment & Maintenance Wing (Tech E & M) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Technical Equipment & Maintenance Wing (Tech E & M) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Technical Equipment & Maintenance Wing (Tech E & M) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Technical Equipment & Maintenance Wing (Tech E & M) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d5_to_d10": {
-          "greeting": "Consolidating district-wide damage data for reconstruction modeling.",
+          "greeting": "Technical Equipment & Maintenance Wing (Tech E & M) activated for D+5 to D+10. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Detailed Damage Assessment (DDA) report",
-            "Infrastructure reconstruction cost modeling",
-            "Structural check of all relief camp sites"
+            "Audit system performance and close urgent technical gaps.",
+            "Support damage and recovery needs assessment with data exports and dashboards.",
+            "Patch, optimize, and secure platforms under sustained disaster workload.",
+            "Archive verified response logs and datasets for analysis."
           ],
           "responses": {
-            "status": "DATA: Preliminary damage estimate: PKR 85 Billion. All 12 camp shelters audited and certified safe.",
-            "default": "Turning damage data into a financially viable reconstruction roadmap."
+            "status": "Technical Equipment & Maintenance Wing (Tech E & M) is tracking D+5 to D+10 priorities: Audit system performance and close urgent technical gaps.",
+            "actions": "Current mandated actions: Audit system performance and close urgent technical gaps; Support damage and recovery needs assessment with data exports and dashboards; Patch, optimize, and secure platforms under sustained disaster workload; Archive verified response logs and datasets for analysis.",
+            "resources": "Technical Equipment & Maintenance Wing (Tech E & M) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Technical Equipment & Maintenance Wing (Tech E & M) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Technical Equipment & Maintenance Wing (Tech E & M) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Technical Equipment & Maintenance Wing (Tech E & M) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d10_to_d20": {
-          "greeting": "Developing the high-priority reconstruction project pipeline.",
+          "greeting": "Technical Equipment & Maintenance Wing (Tech E & M) activated for D+10 to D+20. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Design 15 priority public infra projects",
-            "Standardize seismic-safe building protocols",
-            "Engineering audit of transitional learning centers"
+            "Transition emergency ICT support toward recovery data systems.",
+            "Maintain digital services for compensation, recovery planning, and reporting.",
+            "Document network resilience, uptime, and system failure lessons.",
+            "Recommend technical upgrades for future disaster readiness."
           ],
           "responses": {
-            "status": "PROJECTS: 15 schooling and health facility tenders ready for funding. Protocols for Z4+ Zonation finalized.",
-            "default": "Laying the technical engineering foundation for the 'Build Back Better' phase."
+            "status": "Technical Equipment & Maintenance Wing (Tech E & M) is tracking D+10 to D+20 priorities: Transition emergency ICT support toward recovery data systems.",
+            "actions": "Current mandated actions: Transition emergency ICT support toward recovery data systems; Maintain digital services for compensation, recovery planning, and reporting; Document network resilience, uptime, and system failure lessons; Recommend technical upgrades for future disaster readiness.",
+            "resources": "Technical Equipment & Maintenance Wing (Tech E & M) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Technical Equipment & Maintenance Wing (Tech E & M) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Technical Equipment & Maintenance Wing (Tech E & M) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Technical Equipment & Maintenance Wing (Tech E & M) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         },
         "d20_to_d50": {
-          "greeting": "Final Infrastructure Impact Report and Handover.",
+          "greeting": "Technical Equipment & Maintenance Wing (Tech E & M) activated for D+20 to D+50. Apply the wing mandate to the active scenario and injects.",
           "actions": [
-            "Final Reconstruction Master Plan (Engineering)",
-            "Institutionalize safety audit protocols",
-            "Submit regional seismic vulnerability audit"
+            "Finalize technical performance, data backup, and system improvement reports.",
+            "Restore, service, and account for deployed technical equipment.",
+            "Update platform, network, and dashboard improvement backlogs.",
+            "Preserve incident datasets for institutional learning and future exercises."
           ],
           "responses": {
-            "status": "FINAL ENGINEERING: Master plan approved. PKR 95B project pipeline finalized for donor conference.",
-            "default": "Concluding the engineering audit and project development phase."
+            "status": "Technical Equipment & Maintenance Wing (Tech E & M) is tracking D+20 to D+50 priorities: Finalize technical performance, data backup, and system improvement reports.",
+            "actions": "Current mandated actions: Finalize technical performance, data backup, and system improvement reports; Restore, service, and account for deployed technical equipment; Update platform, network, and dashboard improvement backlogs; Preserve incident datasets for institutional learning and future exercises.",
+            "resources": "Technical Equipment & Maintenance Wing (Tech E & M) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Technical Equipment & Maintenance Wing (Tech E & M) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Technical Equipment & Maintenance Wing (Tech E & M) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Technical Equipment & Maintenance Wing (Tech E & M) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        }
+      }
+    },
+    "drr": {
+      "name": "Disaster Risk Reduction Wing (DRR)",
+      "icon": "DRR",
+      "phases": {
+        "d_day": {
+          "greeting": "Disaster Risk Reduction Wing (DRR) activated for D Day. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Identify priority protection, access, and inclusion gaps from the initial impact picture.",
+            "Check whether anticipatory or early action triggers were met and activate standard action packages.",
+            "Advise NEOC on DRR policy, SOP, and vulnerable group implications.",
+            "Use disaggregated data to guide equitable response priorities."
+          ],
+          "responses": {
+            "status": "Disaster Risk Reduction Wing (DRR) is tracking D Day priorities: Identify priority protection, access, and inclusion gaps from the initial impact picture.",
+            "actions": "Current mandated actions: Identify priority protection, access, and inclusion gaps from the initial impact picture; Check whether anticipatory or early action triggers were met and activate standard action packages; Advise NEOC on DRR policy, SOP, and vulnerable group implications; Use disaggregated data to guide equitable response priorities.",
+            "resources": "Disaster Risk Reduction Wing (DRR) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Disaster Risk Reduction Wing (DRR) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Disaster Risk Reduction Wing (DRR) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Disaster Risk Reduction Wing (DRR) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d1_to_d5": {
+          "greeting": "Disaster Risk Reduction Wing (DRR) activated for D+1 to D+5. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Monitor implementation of early actions and inclusion measures with provincial and district inputs.",
+            "Refine needs modelling and vulnerability analysis as field data improves.",
+            "Coordinate DRR guidance with line ministries, PDMAs, and community networks.",
+            "Escalate policy, access, and protection gaps affecting response delivery."
+          ],
+          "responses": {
+            "status": "Disaster Risk Reduction Wing (DRR) is tracking D+1 to D+5 priorities: Monitor implementation of early actions and inclusion measures with provincial and district inputs.",
+            "actions": "Current mandated actions: Monitor implementation of early actions and inclusion measures with provincial and district inputs; Refine needs modelling and vulnerability analysis as field data improves; Coordinate DRR guidance with line ministries, PDMAs, and community networks; Escalate policy, access, and protection gaps affecting response delivery.",
+            "resources": "Disaster Risk Reduction Wing (DRR) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Disaster Risk Reduction Wing (DRR) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Disaster Risk Reduction Wing (DRR) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Disaster Risk Reduction Wing (DRR) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d5_to_d10": {
+          "greeting": "Disaster Risk Reduction Wing (DRR) activated for D+5 to D+10. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Begin post-disaster learning review and assessment consolidation.",
+            "Review anticipatory action triggers, protocols, and targeting effectiveness.",
+            "Update guidance for safer relief sites, vulnerable groups, and equitable assistance.",
+            "Feed evidence into recovery planning and preparedness improvements."
+          ],
+          "responses": {
+            "status": "Disaster Risk Reduction Wing (DRR) is tracking D+5 to D+10 priorities: Begin post-disaster learning review and assessment consolidation.",
+            "actions": "Current mandated actions: Begin post-disaster learning review and assessment consolidation; Review anticipatory action triggers, protocols, and targeting effectiveness; Update guidance for safer relief sites, vulnerable groups, and equitable assistance; Feed evidence into recovery planning and preparedness improvements.",
+            "resources": "Disaster Risk Reduction Wing (DRR) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Disaster Risk Reduction Wing (DRR) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Disaster Risk Reduction Wing (DRR) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Disaster Risk Reduction Wing (DRR) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d10_to_d20": {
+          "greeting": "Disaster Risk Reduction Wing (DRR) activated for D+10 to D+20. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Draft DRR policy, SOP, and minimum-standard refinements from event evidence.",
+            "Integrate inclusion and vulnerability findings into recovery targeting tools.",
+            "Support risk-informed reconstruction and resilience planning.",
+            "Document accountability findings and recommendations."
+          ],
+          "responses": {
+            "status": "Disaster Risk Reduction Wing (DRR) is tracking D+10 to D+20 priorities: Draft DRR policy, SOP, and minimum-standard refinements from event evidence.",
+            "actions": "Current mandated actions: Draft DRR policy, SOP, and minimum-standard refinements from event evidence; Integrate inclusion and vulnerability findings into recovery targeting tools; Support risk-informed reconstruction and resilience planning; Document accountability findings and recommendations.",
+            "resources": "Disaster Risk Reduction Wing (DRR) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Disaster Risk Reduction Wing (DRR) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Disaster Risk Reduction Wing (DRR) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Disaster Risk Reduction Wing (DRR) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d20_to_d50": {
+          "greeting": "Disaster Risk Reduction Wing (DRR) activated for D+20 to D+50. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Finalize DRR learning, anticipatory action, and policy improvement reports.",
+            "Institutionalize updated triggers, protocols, and preparedness standards.",
+            "Update DRR datasets and vulnerability models for future use.",
+            "Prepare SimEx and CISE recommendations for readiness testing."
+          ],
+          "responses": {
+            "status": "Disaster Risk Reduction Wing (DRR) is tracking D+20 to D+50 priorities: Finalize DRR learning, anticipatory action, and policy improvement reports.",
+            "actions": "Current mandated actions: Finalize DRR learning, anticipatory action, and policy improvement reports; Institutionalize updated triggers, protocols, and preparedness standards; Update DRR datasets and vulnerability models for future use; Prepare SimEx and CISE recommendations for readiness testing.",
+            "resources": "Disaster Risk Reduction Wing (DRR) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Disaster Risk Reduction Wing (DRR) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Disaster Risk Reduction Wing (DRR) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Disaster Risk Reduction Wing (DRR) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        }
+      }
+    },
+    "infrastructure_advisory_project_development": {
+      "name": "Infrastructure Advisory and Project Development Wing (IA&PD)",
+      "icon": "IA",
+      "phases": {
+        "d_day": {
+          "greeting": "Infrastructure Advisory and Project Development Wing (IA&PD) activated for D Day. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Issue immediate infrastructure safety guidance linked to the active warning.",
+            "Prioritize rapid surveys of critical facilities, lifelines, shelters, and access routes.",
+            "Advise on temporary protective measures and urgent material hub use.",
+            "Provide technical inputs to NEOC, PDMAs, and DDMAs for operational decisions."
+          ],
+          "responses": {
+            "status": "Infrastructure Advisory and Project Development Wing (IA&PD) is tracking D Day priorities: Issue immediate infrastructure safety guidance linked to the active warning.",
+            "actions": "Current mandated actions: Issue immediate infrastructure safety guidance linked to the active warning; Prioritize rapid surveys of critical facilities, lifelines, shelters, and access routes; Advise on temporary protective measures and urgent material hub use; Provide technical inputs to NEOC, PDMAs, and DDMAs for operational decisions.",
+            "resources": "Infrastructure Advisory and Project Development Wing (IA&PD) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Infrastructure Advisory and Project Development Wing (IA&PD) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Infrastructure Advisory and Project Development Wing (IA&PD) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Infrastructure Advisory and Project Development Wing (IA&PD) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d1_to_d5": {
+          "greeting": "Infrastructure Advisory and Project Development Wing (IA&PD) activated for D+1 to D+5. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Run rapid infrastructure surveys using standard templates.",
+            "Verify damage reports and identify unsafe structures or routes.",
+            "Coordinate material release, temporary works, and engineering support for relief operations.",
+            "Consolidate infrastructure damage and risk data for planning."
+          ],
+          "responses": {
+            "status": "Infrastructure Advisory and Project Development Wing (IA&PD) is tracking D+1 to D+5 priorities: Run rapid infrastructure surveys using standard templates.",
+            "actions": "Current mandated actions: Run rapid infrastructure surveys using standard templates; Verify damage reports and identify unsafe structures or routes; Coordinate material release, temporary works, and engineering support for relief operations; Consolidate infrastructure damage and risk data for planning.",
+            "resources": "Infrastructure Advisory and Project Development Wing (IA&PD) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Infrastructure Advisory and Project Development Wing (IA&PD) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Infrastructure Advisory and Project Development Wing (IA&PD) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Infrastructure Advisory and Project Development Wing (IA&PD) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d5_to_d10": {
+          "greeting": "Infrastructure Advisory and Project Development Wing (IA&PD) activated for D+5 to D+10. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Support detailed damage assessment, verification, and cost estimation.",
+            "Advise on debris removal, temporary camps, and restoration priorities.",
+            "Develop resilient rehabilitation guidance for critical infrastructure.",
+            "Coordinate recovery technical inputs with line departments and provinces."
+          ],
+          "responses": {
+            "status": "Infrastructure Advisory and Project Development Wing (IA&PD) is tracking D+5 to D+10 priorities: Support detailed damage assessment, verification, and cost estimation.",
+            "actions": "Current mandated actions: Support detailed damage assessment, verification, and cost estimation; Advise on debris removal, temporary camps, and restoration priorities; Develop resilient rehabilitation guidance for critical infrastructure; Coordinate recovery technical inputs with line departments and provinces.",
+            "resources": "Infrastructure Advisory and Project Development Wing (IA&PD) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Infrastructure Advisory and Project Development Wing (IA&PD) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Infrastructure Advisory and Project Development Wing (IA&PD) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Infrastructure Advisory and Project Development Wing (IA&PD) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d10_to_d20": {
+          "greeting": "Infrastructure Advisory and Project Development Wing (IA&PD) activated for D+10 to D+20. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Shape the priority project pipeline for resilient reconstruction.",
+            "Apply Build Back Better guidance and local material options.",
+            "Prepare technical briefs for donors, plans, and implementation authorities.",
+            "Refine audit frameworks using verified disaster evidence."
+          ],
+          "responses": {
+            "status": "Infrastructure Advisory and Project Development Wing (IA&PD) is tracking D+10 to D+20 priorities: Shape the priority project pipeline for resilient reconstruction.",
+            "actions": "Current mandated actions: Shape the priority project pipeline for resilient reconstruction; Apply Build Back Better guidance and local material options; Prepare technical briefs for donors, plans, and implementation authorities; Refine audit frameworks using verified disaster evidence.",
+            "resources": "Infrastructure Advisory and Project Development Wing (IA&PD) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Infrastructure Advisory and Project Development Wing (IA&PD) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Infrastructure Advisory and Project Development Wing (IA&PD) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Infrastructure Advisory and Project Development Wing (IA&PD) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d20_to_d50": {
+          "greeting": "Infrastructure Advisory and Project Development Wing (IA&PD) activated for D+20 to D+50. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Finalize infrastructure impact, project, and reconstruction guidance reports.",
+            "Recommend long-term resilience investments and audit improvements.",
+            "Close material hub accounting and stock recovery actions.",
+            "Archive damage and infrastructure vulnerability datasets."
+          ],
+          "responses": {
+            "status": "Infrastructure Advisory and Project Development Wing (IA&PD) is tracking D+20 to D+50 priorities: Finalize infrastructure impact, project, and reconstruction guidance reports.",
+            "actions": "Current mandated actions: Finalize infrastructure impact, project, and reconstruction guidance reports; Recommend long-term resilience investments and audit improvements; Close material hub accounting and stock recovery actions; Archive damage and infrastructure vulnerability datasets.",
+            "resources": "Infrastructure Advisory and Project Development Wing (IA&PD) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Infrastructure Advisory and Project Development Wing (IA&PD) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Infrastructure Advisory and Project Development Wing (IA&PD) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Infrastructure Advisory and Project Development Wing (IA&PD) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        }
+      }
+    },
+    "operations_logistic": {
+      "name": "Operations and Logistic Wing (Ops & Log)",
+      "icon": "OP",
+      "phases": {
+        "d_day": {
+          "greeting": "Operations and Logistic Wing (Ops & Log) activated for D Day. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Activate national response, rescue, evacuation, and relief coordination.",
+            "Issue initial operational SITREP, priorities, and tasking for field response.",
+            "Coordinate aviation, SAR, armed forces, rescue departments, PDMAs, and line departments.",
+            "Start needs tracking, logistic support requests, and relief distribution planning."
+          ],
+          "responses": {
+            "status": "Operations and Logistic Wing (Ops & Log) is tracking D Day priorities: Activate national response, rescue, evacuation, and relief coordination.",
+            "actions": "Current mandated actions: Activate national response, rescue, evacuation, and relief coordination; Issue initial operational SITREP, priorities, and tasking for field response; Coordinate aviation, SAR, armed forces, rescue departments, PDMAs, and line departments; Start needs tracking, logistic support requests, and relief distribution planning.",
+            "resources": "Operations and Logistic Wing (Ops & Log) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Operations and Logistic Wing (Ops & Log) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Operations and Logistic Wing (Ops & Log) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Operations and Logistic Wing (Ops & Log) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d1_to_d5": {
+          "greeting": "Operations and Logistic Wing (Ops & Log) activated for D+1 to D+5. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Sustain rescue, evacuation, relief distribution, camp, and medical support operations.",
+            "Coordinate transport, warehouses, relief receipts, and resource allocation.",
+            "Publish regular SITREPs and track operational gaps, grievances, and logistics constraints.",
+            "Coordinate emergency procurements and international relief support where required."
+          ],
+          "responses": {
+            "status": "Operations and Logistic Wing (Ops & Log) is tracking D+1 to D+5 priorities: Sustain rescue, evacuation, relief distribution, camp, and medical support operations.",
+            "actions": "Current mandated actions: Sustain rescue, evacuation, relief distribution, camp, and medical support operations; Coordinate transport, warehouses, relief receipts, and resource allocation; Publish regular SITREPs and track operational gaps, grievances, and logistics constraints; Coordinate emergency procurements and international relief support where required.",
+            "resources": "Operations and Logistic Wing (Ops & Log) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Operations and Logistic Wing (Ops & Log) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Operations and Logistic Wing (Ops & Log) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Operations and Logistic Wing (Ops & Log) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d5_to_d10": {
+          "greeting": "Operations and Logistic Wing (Ops & Log) activated for D+5 to D+10. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Transition from emergency response to needs assessment and sustained relief.",
+            "Manage ex-gratia, compensation, and early recovery coordination inputs.",
+            "Oversee stock drawdown, distribution records, and replenishment needs.",
+            "Support Recovery Needs Assessment and recovery coordination with Plans Wing."
+          ],
+          "responses": {
+            "status": "Operations and Logistic Wing (Ops & Log) is tracking D+5 to D+10 priorities: Transition from emergency response to needs assessment and sustained relief.",
+            "actions": "Current mandated actions: Transition from emergency response to needs assessment and sustained relief; Manage ex-gratia, compensation, and early recovery coordination inputs; Oversee stock drawdown, distribution records, and replenishment needs; Support Recovery Needs Assessment and recovery coordination with Plans Wing.",
+            "resources": "Operations and Logistic Wing (Ops & Log) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Operations and Logistic Wing (Ops & Log) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Operations and Logistic Wing (Ops & Log) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Operations and Logistic Wing (Ops & Log) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d10_to_d20": {
+          "greeting": "Operations and Logistic Wing (Ops & Log) activated for D+10 to D+20. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Coordinate early recovery measures, handover, and rehabilitation support.",
+            "Align foreign assistance, donor relief, and operational recovery needs.",
+            "Audit relief distribution, warehouse operations, and transport performance.",
+            "Resolve grievances and support compensation validation."
+          ],
+          "responses": {
+            "status": "Operations and Logistic Wing (Ops & Log) is tracking D+10 to D+20 priorities: Coordinate early recovery measures, handover, and rehabilitation support.",
+            "actions": "Current mandated actions: Coordinate early recovery measures, handover, and rehabilitation support; Align foreign assistance, donor relief, and operational recovery needs; Audit relief distribution, warehouse operations, and transport performance; Resolve grievances and support compensation validation.",
+            "resources": "Operations and Logistic Wing (Ops & Log) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Operations and Logistic Wing (Ops & Log) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Operations and Logistic Wing (Ops & Log) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Operations and Logistic Wing (Ops & Log) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d20_to_d50": {
+          "greeting": "Operations and Logistic Wing (Ops & Log) activated for D+20 to D+50. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Finalize operational, relief, logistic, and recovery performance reporting.",
+            "Replenish national reserves and close warehouse/transport accounts.",
+            "Document lessons for SOPs, contingency plans, and future exercises.",
+            "Complete handover to recovery and rehabilitation stakeholders."
+          ],
+          "responses": {
+            "status": "Operations and Logistic Wing (Ops & Log) is tracking D+20 to D+50 priorities: Finalize operational, relief, logistic, and recovery performance reporting.",
+            "actions": "Current mandated actions: Finalize operational, relief, logistic, and recovery performance reporting; Replenish national reserves and close warehouse/transport accounts; Document lessons for SOPs, contingency plans, and future exercises; Complete handover to recovery and rehabilitation stakeholders.",
+            "resources": "Operations and Logistic Wing (Ops & Log) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Operations and Logistic Wing (Ops & Log) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Operations and Logistic Wing (Ops & Log) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Operations and Logistic Wing (Ops & Log) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        }
+      }
+    },
+    "plans": {
+      "name": "Plans Wing",
+      "icon": "PL",
+      "phases": {
+        "d_day": {
+          "greeting": "Plans Wing activated for D Day. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Activate contingency plans, coordination platforms, clusters, and INSaR readiness checks.",
+            "Consolidate initial needs, humanitarian gaps, and field deployment priorities.",
+            "Coordinate with government, NGOs, INGOs, UN agencies, military, law enforcement, and local authorities.",
+            "Prepare donor, appeal, and resource mobilization inputs."
+          ],
+          "responses": {
+            "status": "Plans Wing is tracking D Day priorities: Activate contingency plans, coordination platforms, clusters, and INSaR readiness checks.",
+            "actions": "Current mandated actions: Activate contingency plans, coordination platforms, clusters, and INSaR readiness checks; Consolidate initial needs, humanitarian gaps, and field deployment priorities; Coordinate with government, NGOs, INGOs, UN agencies, military, law enforcement, and local authorities; Prepare donor, appeal, and resource mobilization inputs.",
+            "resources": "Plans Wing should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Plans Wing should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Plans Wing should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Plans Wing should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d1_to_d5": {
+          "greeting": "Plans Wing activated for D+1 to D+5. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Maintain cluster coordination, field deployment, relief, camp, and INSaR support.",
+            "Coordinate rapid needs assessments and information management.",
+            "Track resource gaps, donor inputs, and operational planning priorities.",
+            "Consolidate response data for authorities, clusters, and partners."
+          ],
+          "responses": {
+            "status": "Plans Wing is tracking D+1 to D+5 priorities: Maintain cluster coordination, field deployment, relief, camp, and INSaR support.",
+            "actions": "Current mandated actions: Maintain cluster coordination, field deployment, relief, camp, and INSaR support; Coordinate rapid needs assessments and information management; Track resource gaps, donor inputs, and operational planning priorities; Consolidate response data for authorities, clusters, and partners.",
+            "resources": "Plans Wing should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Plans Wing should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Plans Wing should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Plans Wing should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d5_to_d10": {
+          "greeting": "Plans Wing activated for D+5 to D+10. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Plan transition from response to recovery and handover responsibilities.",
+            "Support PDNA, recovery needs, shelter, and sustained relief planning.",
+            "Engage donors and UN agencies on reconstruction and recovery appeals.",
+            "Capture lessons affecting planning, coordination, and resource flow."
+          ],
+          "responses": {
+            "status": "Plans Wing is tracking D+5 to D+10 priorities: Plan transition from response to recovery and handover responsibilities.",
+            "actions": "Current mandated actions: Plan transition from response to recovery and handover responsibilities; Support PDNA, recovery needs, shelter, and sustained relief planning; Engage donors and UN agencies on reconstruction and recovery appeals; Capture lessons affecting planning, coordination, and resource flow.",
+            "resources": "Plans Wing should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Plans Wing should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Plans Wing should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Plans Wing should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d10_to_d20": {
+          "greeting": "Plans Wing activated for D+10 to D+20. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Coordinate recovery planning, reconstruction appeals, and shelter rehabilitation support.",
+            "Align partner workplans with national recovery priorities.",
+            "Retain technical human resources and recalibrate training programs.",
+            "Prepare consolidated planning briefings for senior leadership and partners."
+          ],
+          "responses": {
+            "status": "Plans Wing is tracking D+10 to D+20 priorities: Coordinate recovery planning, reconstruction appeals, and shelter rehabilitation support.",
+            "actions": "Current mandated actions: Coordinate recovery planning, reconstruction appeals, and shelter rehabilitation support; Align partner workplans with national recovery priorities; Retain technical human resources and recalibrate training programs; Prepare consolidated planning briefings for senior leadership and partners.",
+            "resources": "Plans Wing should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Plans Wing should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Plans Wing should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Plans Wing should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d20_to_d50": {
+          "greeting": "Plans Wing activated for D+20 to D+50. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Finalize transition, handover, data consolidation, and planning reports.",
+            "Sustain recovery resource flow and donor coordination.",
+            "Integrate lessons learned into future contingency and cluster plans.",
+            "Close planning inputs for PDNA, reconstruction, and exercise evaluation."
+          ],
+          "responses": {
+            "status": "Plans Wing is tracking D+20 to D+50 priorities: Finalize transition, handover, data consolidation, and planning reports.",
+            "actions": "Current mandated actions: Finalize transition, handover, data consolidation, and planning reports; Sustain recovery resource flow and donor coordination; Integrate lessons learned into future contingency and cluster plans; Close planning inputs for PDNA, reconstruction, and exercise evaluation.",
+            "resources": "Plans Wing should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Plans Wing should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Plans Wing should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Plans Wing should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        }
+      }
+    },
+    "regional_military_media": {
+      "name": "Regional & Military Collaboration and Media Wing (RM & M)",
+      "icon": "RM",
+      "phases": {
+        "d_day": {
+          "greeting": "Regional & Military Collaboration and Media Wing (RM & M) activated for D Day. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Notify regional, military, media, telecom, and partner-country coordination channels.",
+            "Issue the first unified public communication, safety instruction, and media line.",
+            "Coordinate military or partner high-end support requests with operational priorities.",
+            "Start misinformation monitoring and two-way media/community engagement."
+          ],
+          "responses": {
+            "status": "Regional & Military Collaboration and Media Wing (RM & M) is tracking D Day priorities: Notify regional, military, media, telecom, and partner-country coordination channels.",
+            "actions": "Current mandated actions: Notify regional, military, media, telecom, and partner-country coordination channels; Issue the first unified public communication, safety instruction, and media line; Coordinate military or partner high-end support requests with operational priorities; Start misinformation monitoring and two-way media/community engagement.",
+            "resources": "Regional & Military Collaboration and Media Wing (RM & M) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Regional & Military Collaboration and Media Wing (RM & M) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Regional & Military Collaboration and Media Wing (RM & M) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Regional & Military Collaboration and Media Wing (RM & M) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d1_to_d5": {
+          "greeting": "Regional & Military Collaboration and Media Wing (RM & M) activated for D+1 to D+5. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Maintain partner, regional, and military liaison on support needs and situation changes.",
+            "Coordinate centralized crisis communication with NDMA, PDMAs, responders, and media.",
+            "Share updated warnings, advisories, public safety content, and verified situation updates.",
+            "Track misinformation and correct false narratives quickly."
+          ],
+          "responses": {
+            "status": "Regional & Military Collaboration and Media Wing (RM & M) is tracking D+1 to D+5 priorities: Maintain partner, regional, and military liaison on support needs and situation changes.",
+            "actions": "Current mandated actions: Maintain partner, regional, and military liaison on support needs and situation changes; Coordinate centralized crisis communication with NDMA, PDMAs, responders, and media; Share updated warnings, advisories, public safety content, and verified situation updates; Track misinformation and correct false narratives quickly.",
+            "resources": "Regional & Military Collaboration and Media Wing (RM & M) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Regional & Military Collaboration and Media Wing (RM & M) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Regional & Military Collaboration and Media Wing (RM & M) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Regional & Military Collaboration and Media Wing (RM & M) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d5_to_d10": {
+          "greeting": "Regional & Military Collaboration and Media Wing (RM & M) activated for D+5 to D+10. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Coordinate sequential recovery or redeployment of partner and military support.",
+            "Shift public communication toward relief access, restoration, and government support.",
+            "Document response evidence and partner contributions for institutional learning.",
+            "Prepare after-action inputs for CISE and partner reporting."
+          ],
+          "responses": {
+            "status": "Regional & Military Collaboration and Media Wing (RM & M) is tracking D+5 to D+10 priorities: Coordinate sequential recovery or redeployment of partner and military support.",
+            "actions": "Current mandated actions: Coordinate sequential recovery or redeployment of partner and military support; Shift public communication toward relief access, restoration, and government support; Document response evidence and partner contributions for institutional learning; Prepare after-action inputs for CISE and partner reporting.",
+            "resources": "Regional & Military Collaboration and Media Wing (RM & M) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Regional & Military Collaboration and Media Wing (RM & M) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Regional & Military Collaboration and Media Wing (RM & M) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Regional & Military Collaboration and Media Wing (RM & M) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d10_to_d20": {
+          "greeting": "Regional & Military Collaboration and Media Wing (RM & M) activated for D+10 to D+20. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Support recovery messaging, compensation awareness, and resilience narratives.",
+            "Coordinate partner lessons, media documentation, and continued support requirements.",
+            "Maintain public trust through transparent official updates and media products.",
+            "Assimilate disaster data into communication and collaboration lessons."
+          ],
+          "responses": {
+            "status": "Regional & Military Collaboration and Media Wing (RM & M) is tracking D+10 to D+20 priorities: Support recovery messaging, compensation awareness, and resilience narratives.",
+            "actions": "Current mandated actions: Support recovery messaging, compensation awareness, and resilience narratives; Coordinate partner lessons, media documentation, and continued support requirements; Maintain public trust through transparent official updates and media products; Assimilate disaster data into communication and collaboration lessons.",
+            "resources": "Regional & Military Collaboration and Media Wing (RM & M) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Regional & Military Collaboration and Media Wing (RM & M) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Regional & Military Collaboration and Media Wing (RM & M) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Regional & Military Collaboration and Media Wing (RM & M) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d20_to_d50": {
+          "greeting": "Regional & Military Collaboration and Media Wing (RM & M) activated for D+20 to D+50. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Finalize media, misinformation, partner coordination, and CISE learning reports.",
+            "Archive disaster-related media content and public communication products.",
+            "Share post-event findings with regional, military, and media stakeholders.",
+            "Recommend improvements to emergency communication and collaboration protocols."
+          ],
+          "responses": {
+            "status": "Regional & Military Collaboration and Media Wing (RM & M) is tracking D+20 to D+50 priorities: Finalize media, misinformation, partner coordination, and CISE learning reports.",
+            "actions": "Current mandated actions: Finalize media, misinformation, partner coordination, and CISE learning reports; Archive disaster-related media content and public communication products; Share post-event findings with regional, military, and media stakeholders; Recommend improvements to emergency communication and collaboration protocols.",
+            "resources": "Regional & Military Collaboration and Media Wing (RM & M) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "Regional & Military Collaboration and Media Wing (RM & M) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "Regional & Military Collaboration and Media Wing (RM & M) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "Regional & Military Collaboration and Media Wing (RM & M) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        }
+      }
+    },
+    "international_collaboration": {
+      "name": "International Collaboration Wing (IC)",
+      "icon": "IC",
+      "phases": {
+        "d_day": {
+          "greeting": "International Collaboration Wing (IC) activated for D Day. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Assess immediate international assistance needs and national resource gaps.",
+            "Alert MoFA, foreign missions, diaspora channels, and international partners as required.",
+            "Map available international offers, agreements, and deployable support.",
+            "Brief federal stakeholders on international cooperation requirements and constraints."
+          ],
+          "responses": {
+            "status": "International Collaboration Wing (IC) is tracking D Day priorities: Assess immediate international assistance needs and national resource gaps.",
+            "actions": "Current mandated actions: Assess immediate international assistance needs and national resource gaps; Alert MoFA, foreign missions, diaspora channels, and international partners as required; Map available international offers, agreements, and deployable support; Brief federal stakeholders on international cooperation requirements and constraints.",
+            "resources": "International Collaboration Wing (IC) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "International Collaboration Wing (IC) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "International Collaboration Wing (IC) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "International Collaboration Wing (IC) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d1_to_d5": {
+          "greeting": "International Collaboration Wing (IC) activated for D+1 to D+5. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Mobilize pre-coordinated international assistance against validated gaps.",
+            "Track incoming offers, diplomatic clearances, handover, and logistic support requirements.",
+            "Coordinate with MoFA, missions, donors, and partner organizations.",
+            "Maintain federal and parliamentary situational updates on international support."
+          ],
+          "responses": {
+            "status": "International Collaboration Wing (IC) is tracking D+1 to D+5 priorities: Mobilize pre-coordinated international assistance against validated gaps.",
+            "actions": "Current mandated actions: Mobilize pre-coordinated international assistance against validated gaps; Track incoming offers, diplomatic clearances, handover, and logistic support requirements; Coordinate with MoFA, missions, donors, and partner organizations; Maintain federal and parliamentary situational updates on international support.",
+            "resources": "International Collaboration Wing (IC) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "International Collaboration Wing (IC) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "International Collaboration Wing (IC) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "International Collaboration Wing (IC) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d5_to_d10": {
+          "greeting": "International Collaboration Wing (IC) activated for D+5 to D+10. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Align international resources with relief, recovery, and rehabilitation priorities.",
+            "Coordinate diplomatic support for affected foreign nationals if needed.",
+            "Prepare international funding, expertise, and technical assistance options.",
+            "Document handover, use, and accountability of international assistance."
+          ],
+          "responses": {
+            "status": "International Collaboration Wing (IC) is tracking D+5 to D+10 priorities: Align international resources with relief, recovery, and rehabilitation priorities.",
+            "actions": "Current mandated actions: Align international resources with relief, recovery, and rehabilitation priorities; Coordinate diplomatic support for affected foreign nationals if needed; Prepare international funding, expertise, and technical assistance options; Document handover, use, and accountability of international assistance.",
+            "resources": "International Collaboration Wing (IC) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "International Collaboration Wing (IC) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "International Collaboration Wing (IC) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "International Collaboration Wing (IC) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d10_to_d20": {
+          "greeting": "International Collaboration Wing (IC) activated for D+10 to D+20. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Coordinate international recovery funding and technical expertise for rehabilitation.",
+            "Engage missions and diaspora communities for targeted resilience support.",
+            "Support infrastructure rebuilding and long-term community resilience partnerships.",
+            "Prepare briefings for government, parliament, and international partners."
+          ],
+          "responses": {
+            "status": "International Collaboration Wing (IC) is tracking D+10 to D+20 priorities: Coordinate international recovery funding and technical expertise for rehabilitation.",
+            "actions": "Current mandated actions: Coordinate international recovery funding and technical expertise for rehabilitation; Engage missions and diaspora communities for targeted resilience support; Support infrastructure rebuilding and long-term community resilience partnerships; Prepare briefings for government, parliament, and international partners.",
+            "resources": "International Collaboration Wing (IC) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "International Collaboration Wing (IC) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "International Collaboration Wing (IC) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "International Collaboration Wing (IC) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
+          }
+        },
+        "d20_to_d50": {
+          "greeting": "International Collaboration Wing (IC) activated for D+20 to D+50. Apply the wing mandate to the active scenario and injects.",
+          "actions": [
+            "Finalize international assistance, funding, and diplomatic support reports.",
+            "Close or transition international support arrangements to recovery programs.",
+            "Capture lessons for future agreements and international disaster cooperation.",
+            "Strengthen global partnership plans for resilience and preparedness."
+          ],
+          "responses": {
+            "status": "International Collaboration Wing (IC) is tracking D+20 to D+50 priorities: Finalize international assistance, funding, and diplomatic support reports.",
+            "actions": "Current mandated actions: Finalize international assistance, funding, and diplomatic support reports; Close or transition international support arrangements to recovery programs; Capture lessons for future agreements and international disaster cooperation; Strengthen global partnership plans for resilience and preparedness.",
+            "resources": "International Collaboration Wing (IC) should identify resources, data, partners, approvals, and support needed to deliver the phase priorities.",
+            "coordination": "International Collaboration Wing (IC) should coordinate with NEOC, relevant NDMA wings, federal and provincial stakeholders, and scenario-specific partners.",
+            "challenges": "International Collaboration Wing (IC) should surface mandate-specific constraints, data gaps, resource bottlenecks, and coordination risks for this phase.",
+            "default": "International Collaboration Wing (IC) should respond to the scenario using its mandate, phase responsibilities, and active inject priorities."
           }
         }
       }

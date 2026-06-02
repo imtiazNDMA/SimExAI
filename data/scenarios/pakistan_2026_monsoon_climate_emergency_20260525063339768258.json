@@ -1,0 +1,21 @@
+{
+    "id": "pakistan_2026_monsoon_climate_emergency_20260525063339768258",
+    "name": "Pakistan 2026 Monsoon Climate Emergency",
+    "type": "Multi-Hazard Flood Event",
+    "magnitude": "High / Climate Emergency",
+    "location": "Nationwide (Gilgit-Baltistan, Khyber Pakhtunkhwa, Punjab, Sindh, Balochistan)",
+    "impact": "Widespread inundation, infrastructure collapse, agricultural loss, and isolation of communities across multiple provinces due to cumulative stress on weakened embankments.",
+    "context": "Pakistan is enduring its fifth consecutive above-normal monsoon season (July-September 2026), creating a climate emergency. Infrastructure has not recovered from previous seasons, leaving embankments along the Indus and its tributaries weakened. The scenario involves flash floods in Gilgit-Baltistan (Gilgit/Hunza rivers) and Khyber Pakhtunkhwa (Swat/Panjora/Kabul rivers), transitioning to riverine flooding in Punjab and Sindh. Visual data indicates massive population exposure, including 1.4 million in the Upper Indus region and 3.4 million in Sindh, alongside critical infrastructure risks like the Tarbela Dam.",
+    "phases": {
+        "d_day": "June - Mid-July 2026 (Early Monsoon)",
+        "d1_to_d5": "Late July 2026",
+        "d5_to_d10": "August 2026",
+        "d10_to_d20": "September 2026",
+        "d20_to_d50": "Post-Monsoon Recovery"
+    },
+    "is_uploaded": true,
+    "source_file": "Internal Simulation Excercise.docx",
+    "source_image_count": 16,
+    "source_visual_page_count": 10,
+    "source_visual_mode": "full_page"
+}

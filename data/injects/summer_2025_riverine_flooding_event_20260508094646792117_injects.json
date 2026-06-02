@@ -9,9 +9,7 @@
             "severity": "HIGH",
             "status": "pending",
             "required_wings": [
-                "w_operations",
-                "w_neoc",
-                "w_logistics"
+                "operations_logistic"
             ]
         },
         {
@@ -23,7 +21,7 @@
             "severity": "HIGH",
             "status": "pending",
             "required_wings": [
-                "w_operations",
+                "operations_logistic",
                 "w_hydel"
             ]
         }
