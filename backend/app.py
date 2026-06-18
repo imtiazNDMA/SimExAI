@@ -142,7 +142,8 @@ def _normalize_injects(injects: list, scenario_id: str) -> list[dict]:
             continue
 
         phase_id = item.get("phase_id") if item.get("phase_id") in PHASE_IDS else "d_day"
-        item["id"] = item.get("id") or f"{scenario_id}_inj_{index:02d}"
+        # Overwrite whatever the LLM generated to ensure strictly unique numbering across all chunks
+        item["id"] = f"{scenario_id}_inj_{index:03d}"
         item["phase_id"] = phase_id
         item["time_offset"] = item.get("time_offset") or "TBD"
         item["title"] = item.get("title") or f"Inject {index}"
