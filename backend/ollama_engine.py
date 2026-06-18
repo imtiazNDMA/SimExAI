@@ -177,7 +177,7 @@ Guardrails:
 Style:
 - Sound professional, authoritative yet collaborative, like a seasoned disaster management director.
 - Be concise. Use 1-3 short paragraphs.
-- Challenge the participant. Do not do their thinking for them. Let them fail or succeed based on their own answers.
+- Challenge the participant. Do not do their thinking for them. Let them fail or succeed based on their own answers."""
 
     def _build_user_prompt(self, wing_id: str, wing_name: str, phase: dict, user_message: str, is_phase_change: bool = False, retrieved_chunks: list = None) -> str:
         scenario_data = getattr(self.scenario, "scenario_data", None) or self.scenario.get_scenario_info()
