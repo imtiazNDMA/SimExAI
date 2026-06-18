@@ -15,9 +15,13 @@ from .scenario_engine import PHASES, ScenarioEngine
 from .document_parser import parse_document
 from .mandate import MandateRegistry
 from .vector_store import VectorStore
+from .database import init_db, save_scenario, save_injects
 
 from dotenv import load_dotenv
 load_dotenv()
+
+# Initialize Database
+init_db()
 
 
 app = FastAPI(
@@ -46,8 +50,6 @@ except Exception as e:
     vector_store = None
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-SCENARIO_DIR = DATA_DIR / "scenarios"
-INJECT_DIR = DATA_DIR / "injects"
 PHASE_IDS = {phase["id"] for phase in PHASES}
 mandates = MandateRegistry()
 
@@ -283,17 +285,9 @@ Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Ever
         scenario_data["source_image_count"] = image_count
         scenario_data["source_visual_page_count"] = visual_page_count
         scenario_data["source_visual_mode"] = visual_mode
-
-        scenario_path = SCENARIO_DIR / f"{scenario_id}.json"
-        injects_path = INJECT_DIR / f"{injects_id}.json"
-        SCENARIO_DIR.mkdir(parents=True, exist_ok=True)
-        INJECT_DIR.mkdir(parents=True, exist_ok=True)
-
-        with open(scenario_path, "w", encoding="utf-8") as f:
-            json.dump(scenario_data, f, indent=4)
         
-        with open(injects_path, "w", encoding="utf-8") as f:
-            json.dump({"injects": injects_list}, f, indent=4)
+        save_scenario(scenario_data)
+        save_injects(scenario_id, injects_list)
             
         if vector_store:
             try:

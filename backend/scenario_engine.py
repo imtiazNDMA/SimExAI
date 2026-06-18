@@ -1,6 +1,6 @@
-"""Scenario engine — manages exercise state and phase progression."""
-import json
 from pathlib import Path
+
+from .database import load_scenario, load_injects
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -33,22 +33,12 @@ class ScenarioEngine:
     def _load_scenario(self) -> dict:
         if not self.scenario_id:
             return {}
-        path = DATA_DIR / "scenarios" / f"{self.scenario_id}.json"
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return {}
+        return load_scenario(self.scenario_id)
 
     def _load_injects(self) -> dict:
         if not self.injects_id:
             return {}
-        path = DATA_DIR / "injects" / f"{self.injects_id}.json"
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return {}
+        return load_injects(self.scenario_id)
 
     def get_scenario_info(self) -> dict:
         return {
