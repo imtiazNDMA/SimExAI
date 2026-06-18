@@ -214,11 +214,16 @@ async def upload_scenario(file: UploadFile = File(...)):
     from langchain_core.messages import HumanMessage, SystemMessage
 
     wing_ids = ", ".join(mandates.wings.keys())
-    system_msg = SystemMessage(content=f'''You are an expert disaster management planner. 
-Use the uploaded scenario document as context. Create one scenario summary and phase injects from that document only.
-Use both the extracted text and the attached full-page visual images. The visuals may contain maps, tables, charts, scanned content, diagrams, damage indicators, timelines, captions, and page layout clues that are not present in extracted text.
+    system_msg = SystemMessage(content=f'''You are an expert disaster management planner for NDMA Pakistan. 
+Your task is to exhaustively extract EVERY distinct incident, hazard, and required response from the provided scenario document. Do not summarize or compress multiple events into one. If the document describes 40 distinct events across different provinces, you must generate 40 separate injects.
+
+Use both the extracted text and the attached full-page visual images. 
+CRITICAL RULES FOR EXTRACTION:
+1. Preserve exact quantitative data (e.g., population counts, river names, road km damage) in your inject descriptions. Do not generalize.
+2. Align the events chronologically to the correct `phase_id` based on the timeline.
+3. Use only these canonical required_wings ids when assigning injects: {{wing_ids}}.
+
 Output ONLY valid JSON that matches this structure. No markdown formatting ticks around the JSON.
-Use only these canonical required_wings ids when assigning injects: {wing_ids}.
 {{
   "scenario": {{
     "id": "generated_from_upload",
@@ -242,15 +247,15 @@ Use only these canonical required_wings ids when assigning injects: {wing_ids}.
       "phase_id": "d_day",
       "time_offset": "H+2HRS",
       "title": "Inject title",
-      "description": "inject description",
+      "description": "Highly detailed inject description preserving exact numbers and locations.",
       "severity": "HIGH",
       "status": "pending",
       "required_wings": ["technical_early_warning", "operations_logistic"]
     }}
   ]
 }}
-Generate at least 10 injects total, spread across all five phase_ids: "d_day", "d1_to_d5", "d5_to_d10", "d10_to_d20", "d20_to_d50".
-Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Every inject must be a complete JSON object.''')
+
+Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Every single inject must be a complete JSON object. Ensure the JSON array is properly closed. Output NOTHING except the raw JSON.''')
     raw_output = "No raw output generated"
 
     try:
