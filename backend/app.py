@@ -14,6 +14,10 @@ from .ollama_engine import OllamaEngine
 from .scenario_engine import PHASES, ScenarioEngine
 from .document_parser import parse_document
 from .mandate import MandateRegistry
+from .vector_store import VectorStore
+
+from dotenv import load_dotenv
+load_dotenv()
 
 
 app = FastAPI(
@@ -34,12 +38,32 @@ app.add_middleware(
 # Initialize engines
 scenario = ScenarioEngine()
 responder = OllamaEngine(scenario)
+try:
+    vector_store = VectorStore()
+    responder.set_vector_store(vector_store)
+except Exception as e:
+    print(f"Warning: Could not initialize VectorStore: {e}")
+    vector_store = None
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 SCENARIO_DIR = DATA_DIR / "scenarios"
 INJECT_DIR = DATA_DIR / "injects"
 PHASE_IDS = {phase["id"] for phase in PHASES}
 mandates = MandateRegistry()
+
+@app.on_event("startup")
+def index_default_scenario():
+    """Index the default scenario into Pinecone on first startup."""
+    if vector_store is None:
+        return
+    try:
+        vector_store.index_scenario(scenario.scenario_id, scenario.scenario_data)
+        vector_store.index_injects(
+            scenario.scenario_id, scenario.injects_data.get("injects", [])
+        )
+        print(f"Indexed default scenario: {scenario.scenario_id}")
+    except Exception as e:
+        print(f"Warning: Could not index default scenario: {e}")
 
 
 def _slugify(value: str | None, fallback: str = "uploaded_scenario") -> str:
@@ -61,27 +85,55 @@ def _read_upload_as_context(file: UploadFile) -> dict:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+def _clean_llm_json(raw: str) -> str:
+    """Remove common LLM artifacts that break JSON parsing."""
+    # Remove lines that are just ellipsis / placeholder comments
+    lines = raw.splitlines()
+    cleaned_lines = []
+    for line in lines:
+        stripped = line.strip().rstrip(",")
+        # Skip lines like: ... , "... more items", // comments, etc.
+        if stripped in ("", "...", "…") or stripped.startswith("...") or stripped.startswith("…"):
+            continue
+        cleaned_lines.append(line)
+    raw = "\n".join(cleaned_lines)
+    # Remove single-line // comments (not inside strings — best-effort)
+    raw = re.sub(r'(?m)^(\s*)//.*$', '', raw)
+    # Remove trailing commas before } or ]
+    raw = re.sub(r',\s*([}\]])', r'\1', raw)
+    return raw
+
+
 def _parse_llm_json(raw_output: str) -> dict:
+    # 1) Try raw output directly
     try:
         return json.loads(raw_output)
     except json.JSONDecodeError:
         pass
 
+    # 2) Extract from markdown code fences if present
     json_str = raw_output
     json_match = re.search(r"```(?:json)?\s*(.*?)\s*```", raw_output, re.DOTALL)
     if json_match:
         json_str = json_match.group(1)
 
+    # 3) Extract outermost { … }
     start_idx = json_str.find("{")
     end_idx = json_str.rfind("}")
     if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
         json_str = json_str[start_idx:end_idx + 1]
 
-    try:
-        import json_repair
-    except ImportError:
-        return json.loads(json_str)
+    # 4) Clean LLM artifacts (ellipsis lines, trailing commas, comments)
+    json_str = _clean_llm_json(json_str)
 
+    # 5) Try parsing the cleaned string
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        pass
+
+    # 6) Fall back to json_repair for anything still broken
+    import json_repair
     parsed = json_repair.loads(json_str)
     return json.loads(parsed) if isinstance(parsed, str) else parsed
 
@@ -204,10 +256,11 @@ Use only these canonical required_wings ids when assigning injects: {wing_ids}.
       "severity": "HIGH",
       "status": "pending",
       "required_wings": ["technical_early_warning", "operations_logistic"]
-    }},
-    ... add some injects spaced out among phase_id "d_day", "d1_to_d5", "d5_to_d10", "d10_to_d20", "d20_to_d50"
+    }}
   ]
-}}''')
+}}
+Generate at least 10 injects total, spread across all five phase_ids: "d_day", "d1_to_d5", "d5_to_d10", "d10_to_d20", "d20_to_d50".
+Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Every inject must be a complete JSON object.''')
     raw_output = "No raw output generated"
 
     try:
@@ -253,6 +306,14 @@ Use only these canonical required_wings ids when assigning injects: {wing_ids}.
         
         with open(injects_path, "w", encoding="utf-8") as f:
             json.dump({"injects": injects_list}, f, indent=4)
+            
+        if vector_store:
+            try:
+                vector_store.delete_scenario(scenario_id)
+                vector_store.index_scenario(scenario_id, scenario_data)
+                vector_store.index_injects(scenario_id, injects_list)
+            except Exception as e:
+                print(f"Warning: Could not index uploaded scenario: {e}")
     
         scenario.load_scenario(scenario_id, injects_id)
         return {

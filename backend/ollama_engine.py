@@ -42,6 +42,7 @@ class OllamaEngine:
         timeout_seconds: int | None = None,
     ):
         self.scenario = scenario
+        self.vector_store = None
         self.metadata = TemplateEngine()
         self.base_url = self._normalize_base_url(
             base_url or os.getenv("OLLAMA_BASE_URL") or "http://172.18.1.132:11434"
@@ -73,6 +74,9 @@ class OllamaEngine:
             if base_url.endswith(suffix):
                 return base_url[: -len(suffix)].rstrip("/")
         return base_url
+
+    def set_vector_store(self, vector_store):
+        self.vector_store = vector_store
 
     def format_llm_error(self, exc: Exception) -> str:
         detail = str(exc)
@@ -117,9 +121,20 @@ class OllamaEngine:
 
         phase = self._get_phase(phase_id)
         is_phase_change = self._is_phase_change_prompt(user_message)
+        
+        retrieved_chunks = []
+        if self.vector_store:
+            scenario_id = getattr(self.scenario, 'scenario_id', None)
+            if scenario_id:
+                retrieved_chunks = self.vector_store.retrieve(
+                    query=user_message,
+                    scenario_id=scenario_id,
+                    top_k=5
+                )
+
         messages = [
             SystemMessage(content=self._build_system_prompt(wing_name, wing_id, phase_id)),
-            HumanMessage(content=self._build_user_prompt(wing_id, wing_name, phase, user_message, is_phase_change)),
+            HumanMessage(content=self._build_user_prompt(wing_id, wing_name, phase, user_message, is_phase_change, retrieved_chunks)),
         ]
 
         try:
@@ -169,7 +184,7 @@ Style:
 - Challenge the participant slightly to test their operational readiness based on their wing's mandate and the current timeline (e.g., D-5, D+10).
 - Avoid robotic disclaimers and generic filler."""
 
-    def _build_user_prompt(self, wing_id: str, wing_name: str, phase: dict, user_message: str, is_phase_change: bool = False) -> str:
+    def _build_user_prompt(self, wing_id: str, wing_name: str, phase: dict, user_message: str, is_phase_change: bool = False, retrieved_chunks: list = None) -> str:
         scenario_data = getattr(self.scenario, "scenario_data", None) or self.scenario.get_scenario_info()
         injects = self.scenario.get_injects_for_phase(phase["id"])
         actions = self.get_wing_actions(wing_id, phase["id"])
@@ -189,9 +204,19 @@ Style:
             if is_phase_change else ""
         )
 
+        rag_section = ""
+        if retrieved_chunks:
+            rag_text = "\n".join(
+                f"- [{c['score']:.2f}] {c['text']}" for c in retrieved_chunks
+            )
+            rag_section = f"""
+Retrieved context from scenario documents (use as primary reference):
+{rag_text}
+"""
+
         return f"""Exercise context:
 {scenario_summary}
-
+{rag_section}
 Current phase timeline:
 {phase_summary}
 
