@@ -165,8 +165,10 @@ Description:
         """Delete all vectors for a scenario by deleting its namespace."""
         try:
             # Pinecone python SDK allows deleting a whole namespace via delete(delete_all=True, namespace=...)
-            # However some versions might not support it directly if not careful.
-            # Using basic delete
             self.index.delete(delete_all=True, namespace=scenario_id)
         except Exception as e:
-            print(f"Error deleting namespace {scenario_id}: {e}")
+            # A 404 error just means the namespace doesn't exist yet, which is completely expected
+            # when uploading a brand new scenario. We only want to log real errors.
+            error_str = str(e)
+            if "404" not in error_str and "not found" not in error_str.lower():
+                print(f"Error deleting namespace {scenario_id}: {e}")
