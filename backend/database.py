@@ -79,14 +79,21 @@ def save_injects(scenario_id: str, injects: List[Dict[str, Any]]):
         conn.execute("DELETE FROM injects WHERE scenario_id = ?", (scenario_id,))
         
         # Insert new injects
-        for inj in injects:
+        for idx, inj in enumerate(injects):
+            raw_id = str(inj.get("id") or "").strip()
+            if not raw_id:
+                raw_id = f"inj_{idx}"
+                
+            # Guarantee global uniqueness across all scenarios
+            inj_id = raw_id if raw_id.startswith(scenario_id) else f"{scenario_id}_{raw_id}"
+                
             conn.execute("""
                 INSERT INTO injects (
                     id, scenario_id, phase_id, time_offset, title, description,
                     severity, target_wings, response_required
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                inj.get("id"),
+                inj_id,
                 scenario_id,
                 inj.get("phase_id"),
                 inj.get("time_offset"),
