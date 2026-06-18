@@ -1,0 +1,17 @@
+{
+    "injects": [
+        {
+            "id": "inj_1",
+            "phase_id": "d_day",
+            "time_offset": "H+0HRS",
+            "title": "Meteorological Alert: Low-Pressure System Formation",
+            "description": "The Tech team confirms a Low-Pressure System (LPS) has formed 750 km from Karachi on June 27th. SST anomalies of 2\u20134\u00b0C are fueling the system. Initial monitoring indicates it is expected to strengthen into a Tropical Depression by June 28th.",
+            "severity": "MEDIUM",
+            "status": "pending",
+            "required_wings": [
+                "technical_early_warning",
+                "nidm"
+            ]
+        }
+    ]
+}

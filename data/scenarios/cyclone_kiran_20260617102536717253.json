@@ -1,0 +1,21 @@
+{
+    "id": "cyclone_kiran_20260617102536717253",
+    "name": "Cyclone Kiran",
+    "type": "Severe Cyclonic Storm",
+    "magnitude": "Category 3 (Extremely Severe) to Category 2 (Severe)",
+    "location": "Arabian Sea, approaching the Sindh Coastline and Karachi, Pakistan",
+    "impact": "Landfall expected near Karachi on July 3rd. Approximately 77,743 people exposed in the immediate zone and ~972,501 affected in the wider region. Significant infrastructure exposure including hospitals, schools, airports, and dams.",
+    "context": "Driven by La Ni\u00f1a conditions causing Sea Surface Temperature (SST) anomalies of 2\u20134\u00b0C in the Arabian Sea. The system formed from a Low-Pressure System on June 27th, intensified rapidly through late June, reached peak intensity as a Category 3 cyclone on July 2nd, and is projected to make landfall near Karachi on July 3rd.",
+    "phases": {
+        "d_day": "June 27th - June 29th (Formation and Initial Intensification)",
+        "d1_to_d5": "June 30th - July 4th (Peak Intensity, Landfall, and Immediate Response)",
+        "d5_to_d10": "July 5th - July 11th (Post-Landfall Recovery)",
+        "d10_to_d20": "July 12th - July 22nd (Assessment and Rehabilitation)",
+        "d20_to_d50": "July 23rd - August 22nd (Long-term Reconstruction)"
+    },
+    "is_uploaded": true,
+    "source_file": "Cyclone -karachi.docx",
+    "source_image_count": 3,
+    "source_visual_page_count": 4,
+    "source_visual_mode": "full_page"
+}

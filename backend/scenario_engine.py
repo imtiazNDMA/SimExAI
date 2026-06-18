@@ -3,8 +3,6 @@ import json
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-DEFAULT_SCENARIO_ID = "earthquake_batagram_7_4"
-DEFAULT_INJECTS_ID = "earthquake_injects"
 
 PHASES = [
     {"id": "d_day", "label": "D Day", "days": "Day 0"},
@@ -18,7 +16,7 @@ PHASES = [
 class ScenarioEngine:
     """State machine for managing SimEx exercise progression."""
 
-    def __init__(self, scenario_id: str = DEFAULT_SCENARIO_ID, injects_id: str = DEFAULT_INJECTS_ID):
+    def __init__(self, scenario_id: str = None, injects_id: str = None):
         self.scenario_id = scenario_id
         self.injects_id = injects_id
         self.current_phase_index = 0
@@ -33,20 +31,30 @@ class ScenarioEngine:
         self.injects_data = self._load_injects()
 
     def _load_scenario(self) -> dict:
+        if not self.scenario_id:
+            return {}
         path = DATA_DIR / "scenarios" / f"{self.scenario_id}.json"
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
 
     def _load_injects(self) -> dict:
+        if not self.injects_id:
+            return {}
         path = DATA_DIR / "injects" / f"{self.injects_id}.json"
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
 
     def get_scenario_info(self) -> dict:
         return {
-            "id": self.scenario_data.get("id", self.scenario_id),
-            "name": self.scenario_data.get("name", "Scenario"),
-            "type": self.scenario_data.get("type", "Disaster"),
+            "id": self.scenario_data.get("id", self.scenario_id or "no_scenario"),
+            "name": self.scenario_data.get("name", "No Scenario Loaded"),
+            "type": self.scenario_data.get("type", "N/A"),
             "magnitude": self.scenario_data.get("magnitude", "N/A"),
             "location": self.scenario_data.get("location", "N/A"),
             "impact": self.scenario_data.get("impact", "N/A"),
@@ -87,7 +95,7 @@ class ScenarioEngine:
         self.current_phase_index = 0
 
     def reset_to_default(self):
-        self.load_scenario(DEFAULT_SCENARIO_ID, DEFAULT_INJECTS_ID)
+        self.load_scenario(None, None)
 
     def get_injects_for_phase(self, phase_id: str) -> list[dict]:
         return [

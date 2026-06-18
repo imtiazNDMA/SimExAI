@@ -51,19 +51,7 @@ INJECT_DIR = DATA_DIR / "injects"
 PHASE_IDS = {phase["id"] for phase in PHASES}
 mandates = MandateRegistry()
 
-@app.on_event("startup")
-def index_default_scenario():
-    """Index the default scenario into Pinecone on first startup."""
-    if vector_store is None:
-        return
-    try:
-        vector_store.index_scenario(scenario.scenario_id, scenario.scenario_data)
-        vector_store.index_injects(
-            scenario.scenario_id, scenario.injects_data.get("injects", [])
-        )
-        print(f"Indexed default scenario: {scenario.scenario_id}")
-    except Exception as e:
-        print(f"Warning: Could not index default scenario: {e}")
+
 
 
 def _slugify(value: str | None, fallback: str = "uploaded_scenario") -> str:
