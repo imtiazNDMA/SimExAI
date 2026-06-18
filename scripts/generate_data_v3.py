@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).parent.parent
 MANDATE_PATH = ROOT / "data" / "Mandate" / "mandate.json"
 OUTPUT_PATH = ROOT / "data" / "templates" / "wing_responses.json"
 
