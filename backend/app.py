@@ -260,29 +260,81 @@ Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Ever
 
     try:
         parsed_data = _read_upload_as_context(file)
+        extracted_text = parsed_data.get("text", "")
+        vision_images = parsed_data.get("vision_images") or []
         image_count = parsed_data.get("image_count", 0)
         visual_page_count = parsed_data.get("visual_page_count", 0)
         visual_mode = parsed_data.get("visual_mode", "none")
-        user_msg = HumanMessage(content=_build_upload_user_content(parsed_data))
 
-        try:
-            llm_res = responder.upload_llm.invoke([system_msg, user_msg])
-        except Exception as exc:
-            return {
-                "message": f"Failed to process upload: {responder.format_llm_error(exc)}",
-                "phases": scenario.get_all_phases(),
+        # Chunk the data to prevent payload/OOM crashes
+        TEXT_CHUNK_SIZE = 15000
+        IMG_CHUNK_SIZE = 5
+
+        text_chunks = []
+        if extracted_text:
+            for i in range(0, len(extracted_text), TEXT_CHUNK_SIZE):
+                text_chunks.append(extracted_text[i:i+TEXT_CHUNK_SIZE])
+        else:
+            text_chunks = [""]
+
+        img_chunks = []
+        if vision_images:
+            for i in range(0, len(vision_images), IMG_CHUNK_SIZE):
+                img_chunks.append(vision_images[i:i+IMG_CHUNK_SIZE])
+        else:
+            img_chunks = [[]]
+
+        num_chunks = max(len(text_chunks), len(img_chunks))
+        while len(text_chunks) < num_chunks: text_chunks.append("")
+        while len(img_chunks) < num_chunks: img_chunks.append([])
+
+        all_injects = []
+        scenario_data = {}
+
+        for i in range(num_chunks):
+            chunk_parsed_data = {
+                "text": text_chunks[i],
+                "image_count": image_count if i == 0 else 0, # only count total images in first chunk to avoid prompt confusion
+                "vision_images": img_chunks[i],
+                "visual_page_count": len(img_chunks[i])
             }
-        raw_output = llm_res.content
-        parsed_json = _parse_llm_json(raw_output)
-        if not isinstance(parsed_json, dict):
-            raise ValueError("LLM output was not a JSON object")
+            user_msg = HumanMessage(content=_build_upload_user_content(chunk_parsed_data))
 
-        scenario_data = parsed_json.get("scenario") or {}
-        if not isinstance(scenario_data, dict):
-            scenario_data = {}
+            try:
+                # Use ainvoke so we don't completely block the FastAPI event loop for 5 minutes
+                llm_res = await responder.upload_llm.ainvoke([system_msg, user_msg])
+                raw_output = llm_res.content
+                parsed_json = _parse_llm_json(raw_output)
+                
+                if not isinstance(parsed_json, dict):
+                    continue
+
+                if i == 0 or not scenario_data:
+                    scen = parsed_json.get("scenario")
+                    if isinstance(scen, dict) and scen:
+                        scenario_data = scen
+
+                injs = parsed_json.get("injects")
+                if isinstance(injs, list):
+                    all_injects.extend(injs)
+
+            except Exception as exc:
+                print(f"Warning: Chunk {i+1}/{num_chunks} failed: {exc}")
+                if i == 0 and num_chunks == 1:
+                    return {
+                        "message": f"Failed to process upload: {responder.format_llm_error(exc)}",
+                        "phases": scenario.get_all_phases(),
+                    }
+
+        if not scenario_data:
+            scenario_data = {
+                "name": "Generated Scenario", "type": "Unknown", "magnitude": "Unknown", 
+                "location": "Unknown", "impact": "Unknown", "context": "Failed to extract complete scenario data"
+            }
+
         scenario_id = _scenario_id_for_upload(scenario_data, file.filename)
         injects_id = f"{scenario_id}_injects"
-        injects_list = _normalize_injects(parsed_json.get("injects") or [], scenario_id)
+        injects_list = _normalize_injects(all_injects, scenario_id)
 
         scenario_data["id"] = scenario_id
         scenario_data["is_uploaded"] = True
