@@ -1054,23 +1054,34 @@ function wrapWordsForHighlight(bubble, timestamps) {
   // 2. Assign start/end times to the newly created spans
   const wordSpans = bubble.querySelectorAll('.tts-word');
   
-  // We do a simple linear distribution if lengths mismatch, 
-  // or a 1-to-1 greedy map if they are close.
-  let tsIdx = 0;
+  // To avoid desync caused by TTS tokenizers splitting words differently 
+  // than the DOM (e.g. "1.1" -> "one point one"), we use a proportional 
+  // percentage mapping. This is extremely robust and never drifts.
+  let totalChars = 0;
+  wordSpans.forEach(span => totalChars += span.textContent.length);
+
+  let charOffset = 0;
   for (let i = 0; i < wordSpans.length; i++) {
     const span = wordSpans[i];
-    // Assign the next available timestamp
-    if (tsIdx < timestamps.length) {
-      span.dataset.start = timestamps[tsIdx].start;
-      span.dataset.end = timestamps[tsIdx].end;
-      // We advance the timestamp index. If the tokenizer split one DOM word into many TTS tokens, 
-      // we might desync slightly, but this is far safer than destroying the DOM.
-      tsIdx++;
-    } else if (timestamps.length > 0) {
-      // Fallback: assign the last timestamp's end time
-      span.dataset.start = timestamps[timestamps.length - 1].end;
-      span.dataset.end = timestamps[timestamps.length - 1].end + 0.1;
+    const spanLen = span.textContent.length;
+    
+    if (timestamps.length > 0 && totalChars > 0) {
+      const startPct = charOffset / totalChars;
+      const endPct = (charOffset + spanLen) / totalChars;
+      
+      let startTsIdx = Math.floor(startPct * timestamps.length);
+      let endTsIdx = Math.max(0, Math.ceil(endPct * timestamps.length) - 1);
+      
+      if (startTsIdx >= timestamps.length) startTsIdx = timestamps.length - 1;
+      if (endTsIdx >= timestamps.length) endTsIdx = timestamps.length - 1;
+      
+      span.dataset.start = timestamps[startTsIdx].start;
+      span.dataset.end = timestamps[endTsIdx].end;
+    } else {
+      span.dataset.start = 0;
+      span.dataset.end = 0;
     }
+    charOffset += spanLen;
   }
 }
 
