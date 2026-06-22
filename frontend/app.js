@@ -952,8 +952,10 @@ async function ttsPlayForMessage(msgIdx, text, btn) {
         if (!ttsAudio || ttsAudio.paused) return;
         const t = ttsAudio.currentTime;
         let currentIdx = -1;
-        for (let i = 0; i < timestamps.length; i++) {
-          if (t >= timestamps[i].start && t <= timestamps[i].end + 0.05) {
+        for (let i = 0; i < wordSpans.length; i++) {
+          const start = parseFloat(wordSpans[i].dataset.start || 0);
+          const end = parseFloat(wordSpans[i].dataset.end || 0);
+          if (t >= start && t <= end + 0.05) {
             currentIdx = i;
           }
         }
@@ -1014,42 +1016,62 @@ function ttsStop() {
 }
 
 function wrapWordsForHighlight(bubble, timestamps) {
-  // Get the raw text from the message (strip HTML, then rebuild with spans)
-  const rawText = bubble.textContent || bubble.innerText;
-  if (!rawText.trim()) return;
+  if (!timestamps || timestamps.length === 0) return;
 
-  // Build a mapping: for each timestamp word, wrap it in a span
-  // We do this by walking through the raw text and matching words from timestamps
-  const words = timestamps.map(t => t.word);
-  let html = '';
-  let textPos = 0;
-  const lowerRaw = rawText.toLowerCase();
-
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    const wordLower = word.toLowerCase();
-    // Find this word in the remaining text
-    const foundIdx = lowerRaw.indexOf(wordLower, textPos);
-    if (foundIdx === -1) {
-      // Word not found, just add a span anyway
-      html += `<span class="tts-word" data-word-idx="${i}">${escapeHtml(word)} </span>`;
-      continue;
+  // 1. Safely wrap all text nodes in the bubble with <span class="tts-word">
+  function wrapTextNodes(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (!node.nodeValue.trim()) return;
+      const words = node.nodeValue.split(/(\s+)/);
+      const fragment = document.createDocumentFragment();
+      let hasWord = false;
+      words.forEach(w => {
+        if (w.trim()) {
+          const span = document.createElement('span');
+          span.className = 'tts-word';
+          span.textContent = w;
+          fragment.appendChild(span);
+          hasWord = true;
+        } else {
+          fragment.appendChild(document.createTextNode(w));
+        }
+      });
+      if (hasWord) {
+        node.parentNode.replaceChild(fragment, node);
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE && !node.classList.contains('tts-word')) {
+      // Traverse children backwards so replacements don't mess up indices
+      const children = Array.from(node.childNodes);
+      for (let i = children.length - 1; i >= 0; i--) {
+        wrapTextNodes(children[i]);
+      }
     }
-    // Add any text before this word (whitespace, punctuation, etc.)
-    if (foundIdx > textPos) {
-      html += escapeHtml(rawText.substring(textPos, foundIdx));
-    }
-    // Add the word wrapped in a span
-    const actualWord = rawText.substring(foundIdx, foundIdx + word.length);
-    html += `<span class="tts-word" data-word-idx="${i}">${escapeHtml(actualWord)}</span>`;
-    textPos = foundIdx + word.length;
-  }
-  // Add remaining text
-  if (textPos < rawText.length) {
-    html += escapeHtml(rawText.substring(textPos));
   }
 
-  bubble.innerHTML = html;
+  // Preserve the bubble's original structure but wrap words
+  wrapTextNodes(bubble);
+
+  // 2. Assign start/end times to the newly created spans
+  const wordSpans = bubble.querySelectorAll('.tts-word');
+  
+  // We do a simple linear distribution if lengths mismatch, 
+  // or a 1-to-1 greedy map if they are close.
+  let tsIdx = 0;
+  for (let i = 0; i < wordSpans.length; i++) {
+    const span = wordSpans[i];
+    // Assign the next available timestamp
+    if (tsIdx < timestamps.length) {
+      span.dataset.start = timestamps[tsIdx].start;
+      span.dataset.end = timestamps[tsIdx].end;
+      // We advance the timestamp index. If the tokenizer split one DOM word into many TTS tokens, 
+      // we might desync slightly, but this is far safer than destroying the DOM.
+      tsIdx++;
+    } else if (timestamps.length > 0) {
+      // Fallback: assign the last timestamp's end time
+      span.dataset.start = timestamps[timestamps.length - 1].end;
+      span.dataset.end = timestamps[timestamps.length - 1].end + 0.1;
+    }
+  }
 }
 
 // Initialize STT on page load
