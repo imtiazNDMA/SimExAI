@@ -39,6 +39,7 @@ const actionsList     = $('#actions-list');
 const actionsModalTitle = $('#actions-modal-title');
 const btnCloseActions = $('#btn-close-actions');
 const btnSend         = $('#btn-send');
+const btnMic          = $('#btn-mic');
 const sidebarToggle   = $('#sidebar-toggle');
 const sidebar         = $('#sidebar');
 const sidebarOverlay  = $('#sidebar-overlay');
@@ -379,6 +380,7 @@ function selectWing(wingId) {
 
   chatInput.disabled = false;
   btnSend.disabled = false;
+  if (btnMic) btnMic.disabled = false;
   btnShowActions.disabled = false;
   chatInput.focus();
 
@@ -402,7 +404,10 @@ async function sendGreeting(wingId, isPhaseChange = false) {
     body: JSON.stringify({ wing_id: wingId, phase_id: phaseId, message: msgText }),
   });
   hideTypingIndicator();
-  if (data) addMessage(wingId, 'system', data.response, data.wing_name);
+  if (data) {
+    addMessage(wingId, 'system', data.response, data.wing_name);
+    ttsAutoPlay(data.response);
+  }
 }
 
 // ── Chat ───────────────────────────────────────
@@ -425,20 +430,38 @@ function renderMessages() {
     return;
   }
 
-  chatMessages.innerHTML = msgs.map(m => {
+  chatMessages.innerHTML = msgs.map((m, idx) => {
     if (m.type === 'notification') {
       return `
         <div class="message notification">
           <div class="message-bubble">${formatText(m.text)}</div>
         </div>`;
     }
-    return `
-      <div class="message ${m.type}">
-        ${m.type === 'system' ? `<span class="message-label">${m.wingName}</span>` : ''}
-        <div class="message-bubble">${formatText(m.text)}</div>
+    const speakerBtn = m.type === 'system' ? `
+      <div class="tts-controls">
+        <button class="tts-speaker-btn" data-msg-idx="${idx}" title="Play / Stop TTS">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        </button>
         <span class="message-time">${m.time}</span>
+      </div>` : `<span class="message-time">${m.time}</span>`;
+    return `
+      <div class="message ${m.type}" data-msg-idx="${idx}">
+        ${m.type === 'system' ? `<span class="message-label">${m.wingName}</span>` : ''}
+        <div class="message-bubble" id="msg-bubble-${idx}">${formatText(m.text)}</div>
+        ${speakerBtn}
       </div>`;
   }).join('');
+
+  // Attach click handlers to speaker buttons
+  chatMessages.querySelectorAll('.tts-speaker-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.msgIdx);
+      const wingId = state.activeWing?.id;
+      if (wingId && state.messages[wingId] && state.messages[wingId][idx]) {
+        ttsPlayForMessage(idx, state.messages[wingId][idx].text, btn);
+      }
+    });
+  });
 
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -534,6 +557,7 @@ chatForm.addEventListener('submit', async e => {
 
   if (data) {
     addMessage(wingId, 'system', data.response, data.wing_name);
+    ttsAutoPlay(data.response);
   } else {
     addMessage(wingId, 'system', 'Error: Could not get a response. Please try again.', 'System');
   }
@@ -773,6 +797,263 @@ function showToast(message) {
     setTimeout(() => el.remove(), 310);
   }, 3000);
 }
+
+// ══════════════════════════════════════════════════
+//  VOICE FEATURES: Push-to-Talk STT + Kokoro TTS
+// ══════════════════════════════════════════════════
+
+// ── Push-to-Talk (Speech-to-Text) ──────────────
+let sttRecognition = null;
+let sttIsListening = false;
+
+function initSTT() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    console.warn('Web Speech API not supported in this browser');
+    if (btnMic) btnMic.style.display = 'none';
+    return;
+  }
+
+  sttRecognition = new SpeechRecognition();
+  sttRecognition.continuous = false;
+  sttRecognition.interimResults = true;
+  sttRecognition.lang = 'en-US';
+  sttRecognition.maxAlternatives = 1;
+
+  sttRecognition.onstart = () => {
+    sttIsListening = true;
+    btnMic.classList.add('recording');
+    chatInput.placeholder = '🎤 Listening...';
+  };
+
+  sttRecognition.onresult = (event) => {
+    let finalTranscript = '';
+    let interimTranscript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript;
+      } else {
+        interimTranscript += transcript;
+      }
+    }
+    // Show interim results as they come
+    chatInput.value = finalTranscript || interimTranscript;
+  };
+
+  sttRecognition.onend = () => {
+    sttIsListening = false;
+    btnMic.classList.remove('recording');
+    chatInput.placeholder = 'Type your response or ask the wing AI...';
+
+    // Auto-submit if we got text
+    const text = chatInput.value.trim();
+    if (text) {
+      chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+    }
+  };
+
+  sttRecognition.onerror = (event) => {
+    console.error('STT error:', event.error);
+    sttIsListening = false;
+    btnMic.classList.remove('recording');
+    chatInput.placeholder = 'Type your response or ask the wing AI...';
+    if (event.error === 'not-allowed') {
+      showToast('Microphone access denied. Please allow microphone permissions.');
+    }
+  };
+
+  // Wire up the mic button
+  if (btnMic) {
+    btnMic.addEventListener('click', () => {
+      if (!state.activeWing) return;
+      if (sttIsListening) {
+        sttRecognition.stop();
+      } else {
+        // Stop any playing TTS first
+        ttsStop();
+        chatInput.value = '';
+        sttRecognition.start();
+      }
+    });
+  }
+}
+
+// ── TTS (Text-to-Speech via Kokoro) ────────────
+let ttsAudio = null;
+let ttsAnimFrame = null;
+let ttsActiveBtn = null;
+let ttsActiveBubbleIdx = null;
+
+async function ttsAutoPlay(text) {
+  if (!text) return;
+  // Find the last system message index
+  const wingId = state.activeWing?.id;
+  if (!wingId || !state.messages[wingId]) return;
+  const msgs = state.messages[wingId];
+  const lastIdx = msgs.length - 1;
+  if (lastIdx < 0 || msgs[lastIdx].type !== 'system') return;
+
+  // Small delay to let DOM render
+  await new Promise(r => setTimeout(r, 200));
+
+  const btn = chatMessages.querySelector(`.tts-speaker-btn[data-msg-idx="${lastIdx}"]`);
+  ttsPlayForMessage(lastIdx, text, btn);
+}
+
+async function ttsPlayForMessage(msgIdx, text, btn) {
+  // If already playing this message, stop it
+  if (ttsAudio && ttsActiveBubbleIdx === msgIdx) {
+    ttsStop();
+    return;
+  }
+  // Stop any existing playback
+  ttsStop();
+
+  ttsActiveBubbleIdx = msgIdx;
+  ttsActiveBtn = btn;
+  if (btn) btn.classList.add('playing');
+
+  try {
+    const res = await fetch(`${API_BASE}/tts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+
+    if (!data.audio || data.error) {
+      console.warn('TTS not available:', data.error || 'no audio');
+      ttsStop();
+      return;
+    }
+
+    // Prepare the bubble for word highlighting
+    const bubble = document.getElementById(`msg-bubble-${msgIdx}`);
+    if (bubble && data.timestamps && data.timestamps.length > 0) {
+      wrapWordsForHighlight(bubble, data.timestamps);
+    }
+
+    // Decode base64 WAV and play
+    const audioBytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
+    const blob = new Blob([audioBytes], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+
+    ttsAudio = new Audio(url);
+    ttsAudio.playbackRate = 1.0;
+
+    // Sync highlighting with audio playback
+    const timestamps = data.timestamps || [];
+    if (timestamps.length > 0 && bubble) {
+      const wordSpans = bubble.querySelectorAll('.tts-word');
+      let lastHighlighted = -1;
+
+      const syncHighlight = () => {
+        if (!ttsAudio || ttsAudio.paused) return;
+        const t = ttsAudio.currentTime;
+        let currentIdx = -1;
+        for (let i = 0; i < timestamps.length; i++) {
+          if (t >= timestamps[i].start && t <= timestamps[i].end + 0.05) {
+            currentIdx = i;
+          }
+        }
+        if (currentIdx !== lastHighlighted) {
+          // Remove previous highlight
+          if (lastHighlighted >= 0 && lastHighlighted < wordSpans.length) {
+            wordSpans[lastHighlighted].classList.remove('tts-highlight');
+          }
+          // Add new highlight
+          if (currentIdx >= 0 && currentIdx < wordSpans.length) {
+            wordSpans[currentIdx].classList.add('tts-highlight');
+            // Scroll into view if needed
+            wordSpans[currentIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          }
+          lastHighlighted = currentIdx;
+        }
+        ttsAnimFrame = requestAnimationFrame(syncHighlight);
+      };
+
+      ttsAudio.addEventListener('play', () => {
+        ttsAnimFrame = requestAnimationFrame(syncHighlight);
+      });
+    }
+
+    ttsAudio.addEventListener('ended', () => {
+      ttsStop();
+    });
+
+    ttsAudio.play().catch(err => {
+      console.warn('Audio autoplay blocked:', err);
+      ttsStop();
+    });
+
+  } catch (err) {
+    console.error('TTS fetch error:', err);
+    ttsStop();
+  }
+}
+
+function ttsStop() {
+  if (ttsAnimFrame) {
+    cancelAnimationFrame(ttsAnimFrame);
+    ttsAnimFrame = null;
+  }
+  if (ttsAudio) {
+    ttsAudio.pause();
+    ttsAudio.currentTime = 0;
+    if (ttsAudio.src) URL.revokeObjectURL(ttsAudio.src);
+    ttsAudio = null;
+  }
+  if (ttsActiveBtn) {
+    ttsActiveBtn.classList.remove('playing');
+    ttsActiveBtn = null;
+  }
+  // Remove all highlights
+  document.querySelectorAll('.tts-highlight').forEach(el => el.classList.remove('tts-highlight'));
+  ttsActiveBubbleIdx = null;
+}
+
+function wrapWordsForHighlight(bubble, timestamps) {
+  // Get the raw text from the message (strip HTML, then rebuild with spans)
+  const rawText = bubble.textContent || bubble.innerText;
+  if (!rawText.trim()) return;
+
+  // Build a mapping: for each timestamp word, wrap it in a span
+  // We do this by walking through the raw text and matching words from timestamps
+  const words = timestamps.map(t => t.word);
+  let html = '';
+  let textPos = 0;
+  const lowerRaw = rawText.toLowerCase();
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const wordLower = word.toLowerCase();
+    // Find this word in the remaining text
+    const foundIdx = lowerRaw.indexOf(wordLower, textPos);
+    if (foundIdx === -1) {
+      // Word not found, just add a span anyway
+      html += `<span class="tts-word" data-word-idx="${i}">${escapeHtml(word)} </span>`;
+      continue;
+    }
+    // Add any text before this word (whitespace, punctuation, etc.)
+    if (foundIdx > textPos) {
+      html += escapeHtml(rawText.substring(textPos, foundIdx));
+    }
+    // Add the word wrapped in a span
+    const actualWord = rawText.substring(foundIdx, foundIdx + word.length);
+    html += `<span class="tts-word" data-word-idx="${i}">${escapeHtml(actualWord)}</span>`;
+    textPos = foundIdx + word.length;
+  }
+  // Add remaining text
+  if (textPos < rawText.length) {
+    html += escapeHtml(rawText.substring(textPos));
+  }
+
+  bubble.innerHTML = html;
+}
+
+// Initialize STT on page load
+initSTT();
 
 // ── Start ──────────────────────────────────────
 init();

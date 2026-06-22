@@ -473,6 +473,36 @@ def get_injects():
     }
 
 
+# ── TTS Engine (lazy-loaded) ───────────────────────────────
+_tts_engine = None
+
+def _get_tts():
+    global _tts_engine
+    if _tts_engine is not None:
+        return _tts_engine
+    try:
+        from . import tts_engine
+        _tts_engine = tts_engine
+        return _tts_engine
+    except Exception as e:
+        print(f"Warning: Kokoro TTS not available: {e}")
+        return None
+
+
+from pydantic import BaseModel as _PydanticBase
+
+class TTSRequest(_PydanticBase):
+    text: str
+
+@app.post("/api/tts")
+def text_to_speech(request: TTSRequest):
+    """Generate speech audio with word-level timestamps for highlighting."""
+    engine = _get_tts()
+    if engine is None:
+        return {"audio": "", "timestamps": [], "error": "TTS engine not available"}
+    return engine.generate_speech(request.text)
+
+
 # ── Static File Serving (production) ───────────────────────
 
 frontend_dir = Path(__file__).parent.parent / "frontend"
