@@ -54,7 +54,7 @@ D Day → D+1–D+5 → D+5–D+10 → D+10–D+20 → D+20–D+50
 uv sync
 
 # Start backend server
-uv run uvicorn backend.app:app --reload --port 8000
+uv run uvicorn backend.app:app --reload
 
 # Access the application
 # Open http://localhost:8000 in your browser

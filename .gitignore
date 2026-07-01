@@ -9,3 +9,8 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+# Database files
+*.db
+*.sqlite3
+data/simex.db
