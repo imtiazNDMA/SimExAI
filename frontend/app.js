@@ -902,9 +902,15 @@ async function ttsAutoPlay(text) {
 }
 
 async function ttsPlayForMessage(msgIdx, text, btn) {
-  // If already playing this message, stop it
+  // If already playing this message, handle pause/resume
   if (ttsAudio && ttsActiveBubbleIdx === msgIdx) {
-    ttsStop();
+    if (ttsAudio.paused) {
+      if (btn) btn.classList.add('playing');
+      ttsAudio.play().catch(err => console.warn(err));
+    } else {
+      ttsAudio.pause();
+      if (btn) btn.classList.remove('playing');
+    }
     return;
   }
   // Stop any existing playback
