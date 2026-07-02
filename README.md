@@ -44,8 +44,9 @@ D-90 → D-30 → D-Day → D+30 → D+90
 ### Prerequisites
 - Python 3.10+
 - `uv` package manager
-- Pinecone API Key (Set `PINECONE_API_KEY` in environment variables)
-- Ollama running locally (Default: `http://localhost:11434` with model `qwen3.6:35b`)
+- Copy `.env.example` to `.env` and configure your API keys and settings:
+  - Pinecone API Key (`PINECONE_API_KEY`)
+  - Ollama running locally (Default: `http://localhost:11434` with model `qwen3.6:35b`)
 
 ### Installation & Run
 
