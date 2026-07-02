@@ -141,7 +141,7 @@ def _normalize_injects(injects: list, scenario_id: str) -> list[dict]:
         if not isinstance(item, dict):
             continue
 
-        phase_id = item.get("phase_id") if item.get("phase_id") in PHASE_IDS else "d_day"
+        phase_id = item.get("phase_id") if item.get("phase_id") in PHASE_IDS else "d_minus_90"
         # Overwrite whatever the LLM generated to ensure strictly unique numbering across all chunks
         item["id"] = f"{scenario_id}_inj_{index:03d}"
         item["phase_id"] = phase_id
@@ -235,17 +235,17 @@ Output ONLY valid JSON that matches this structure. No markdown formatting ticks
     "impact": "Brief impact description",
     "context": "Context description",
     "phases": {{
-        "d_day": "D Day timeframe",
-        "d1_to_d5": "Days 1-5 timeframe",
-        "d5_to_d10": "Days 5-10 timeframe",
-        "d10_to_d20": "Days 10-20 timeframe",
-        "d20_to_d50": "Days 20-50 timeframe"
+        "d_minus_90": "90 days before disaster",
+        "d_minus_30": "30 days before disaster",
+        "d_day": "Disaster day",
+        "d_plus_30": "30 days after disaster",
+        "d_plus_90": "90 days after disaster"
     }}
   }},
   "injects": [
     {{
       "id": "inj_1",
-      "phase_id": "d_day",
+      "phase_id": "d_minus_90",
       "time_offset": "H+2HRS",
       "title": "Inject title",
       "description": "Highly detailed inject description preserving exact numbers and locations.",
@@ -400,7 +400,7 @@ def go_back_phase():
     """Go back to the previous phase."""
     prev_phase = scenario.go_back_phase()
     if prev_phase is None:
-        return {"message": "Already at D Day", "phases": scenario.get_all_phases()}
+        return {"message": "Already at D-90", "phases": scenario.get_all_phases()}
     return {
         "message": f"Returned to {prev_phase['label']}",
         "current_phase": prev_phase,
@@ -414,7 +414,7 @@ def reset_phases():
     """Reset to the default exercise and D Day."""
     scenario.reset_to_default()
     return {
-        "message": "Exercise reset to D Day",
+        "message": "Exercise reset to D-90",
         "scenario": scenario.get_scenario_info(),
         "phases": scenario.get_all_phases(),
         "injects": scenario.get_current_injects(),

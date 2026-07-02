@@ -36,11 +36,11 @@ The scenario engine manages exercise state:
 ```python
 # State Machine: Phases flow in order
 PHASES = [
-    {"id": "d_day",       "label": "D Day",         "days": "Day 0"},
-    {"id": "d1_to_d5",    "label": "D+1 to D+5",    "days": "Days 1-5"},
-    {"id": "d5_to_d10",   "label": "D+5 to D+10",   "days": "Days 5-10"},
-    {"id": "d10_to_d20",  "label": "D+10 to D+20",  "days": "Days 10-20"},
-    {"id": "d20_to_d50",  "label": "D+20 to D+50",  "days": "Days 20-50"},
+    {"id": "d_minus_90",  "label": "D-90",   "days": "Day -90"},
+    {"id": "d_minus_30",  "label": "D-30",   "days": "Day -30"},
+    {"id": "d_day",       "label": "D-Day",  "days": "Day 0"},
+    {"id": "d_plus_30",   "label": "D+30",   "days": "Day +30"},
+    {"id": "d_plus_90",   "label": "D+90",   "days": "Day +90"},
 ]
 ```
 
@@ -88,7 +88,7 @@ class OllamaEngine:
 // POST /api/chat
 {
     "wing_id": "operations_logistic",
-    "phase_id": "d_day",
+    "phase_id": "d_minus_90",
     "message": "What is the current situation?"
 }
 
@@ -96,7 +96,7 @@ class OllamaEngine:
 {
     "wing_id": "operations_logistic",
     "wing_name": "Operations and Logistic Wing (Ops & Log)",
-    "phase_id": "d_day",
+    "phase_id": "d_minus_90",
     "response": "NEOC activated to 24/7 operations. First SitRep issued...",
     "timestamp": "2026-03-05T06:30:00Z"
 }

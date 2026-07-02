@@ -36,11 +36,11 @@ frontend/
 │  Selector  │                         │   & Status    │
 │  Panel     │  [Messages]             │   Panel       │
 │            │  [Messages]             │               │
-│  • Tech EW │  [Messages]             │  ● D Day      │
-│  • Ops Wing│                         │  ○ D+1-D+5    │
-│  • Logist. │  ┌──────────────────┐   │  ○ D+5-D+10   │
-│  • DRR     │  │ Type message...  │   │  ○ D+10-D+20  │
-│  • GCC     │  └──────────────────┘   │  ○ D+20-D+50  │
+│  • Tech EW │  [Messages]             │  ● D-90       │
+│  • Ops Wing│                         │  ○ D-30       │
+│  • Logist. │  ┌──────────────────┐   │  ○ D-Day      │
+│  • DRR     │  │ Type message...  │   │  ○ D+30       │
+│  • GCC     │  └──────────────────┘   │  ○ D+90       │
 │  • PCC     │                         │               │
 │  • Tech EM │                         │  [Injects]    │
 │  • Military│                         │               │

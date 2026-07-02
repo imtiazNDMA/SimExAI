@@ -392,7 +392,7 @@ function selectWing(wingId) {
 }
 
 async function sendGreeting(wingId, isPhaseChange = false) {
-  const phaseId = state.currentPhase ? state.currentPhase.id : 'd_day';
+  const phaseId = state.currentPhase ? state.currentPhase.id : 'd_minus_90';
   showTypingIndicator();
   
   let msgText = isPhaseChange
@@ -543,7 +543,7 @@ chatForm.addEventListener('submit', async e => {
   if (!message || !state.activeWing) return;
 
   const wingId  = state.activeWing.id;
-  const phaseId = state.currentPhase ? state.currentPhase.id : 'd_day';
+  const phaseId = state.currentPhase ? state.currentPhase.id : 'd_minus_90';
 
   addMessage(wingId, 'user', message);
   chatInput.value = '';
@@ -632,7 +632,7 @@ function updateButtonStates() {
 }
 
 btnReset.addEventListener('click', async () => {
-  if (!confirm('Reset exercise to D Day? Chat history and the uploaded scenario summary will be cleared.')) return;
+  if (!confirm('Reset exercise to D-90? Chat history and the uploaded scenario summary will be cleared.')) return;
   const data = await api('/phase/reset', { method: 'POST' });
   if (data?.phases) {
     state.phases      = data.phases;
@@ -654,7 +654,7 @@ btnReset.addEventListener('click', async () => {
     wingList.querySelectorAll('.wing-item').forEach(el => el.classList.remove('active'));
     if (data.injects) renderInjects();
     else await loadInjects();
-    showToast('Exercise reset to D Day');
+    showToast('Exercise reset to D-90');
   }
 });
 

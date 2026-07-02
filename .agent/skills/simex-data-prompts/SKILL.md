@@ -47,11 +47,11 @@ data/
         "houses_damaged": "30000-60000"
     },
     "phases": [
-        { "id": "d_day", "label": "D Day", "days": "Day 0" },
-        { "id": "d1_to_d5", "label": "D+1 to D+5", "days": "Days 1-5" },
-        { "id": "d5_to_d10", "label": "D+5 to D+10", "days": "Days 5-10" },
-        { "id": "d10_to_d20", "label": "D+10 to D+20", "days": "Days 10-20" },
-        { "id": "d20_to_d50", "label": "D+20 to D+50", "days": "Days 20-50" }
+        { "id": "d_minus_90", "label": "D-90", "days": "Day -90" },
+        { "id": "d_minus_30", "label": "D-30", "days": "Day -30" },
+        { "id": "d_day", "label": "D-Day", "days": "Day 0" },
+        { "id": "d_plus_30", "label": "D+30", "days": "Day +30" },
+        { "id": "d_plus_90", "label": "D+90", "days": "Day +90" }
     ]
 }
 ```
@@ -65,7 +65,7 @@ data/
             "name": "Technical Early Warning Wing (Tech EW)",
             "icon": "EW",
             "phases": {
-                "d_day": {
+                "d_minus_90": {
                     "greeting": "Tech Early Warning Wing activated...",
                     "actions": ["Issue earthquake alert...", "..."],
                     "responses": {
@@ -88,7 +88,7 @@ data/
     "injects": [
         {
             "id": "inject_001",
-            "phase_id": "d_day",
+            "phase_id": "d_minus_90",
             "time_offset": "+2h",
             "title": "Aftershock M5.8",
             "description": "A M5.8 aftershock causes secondary collapse...",

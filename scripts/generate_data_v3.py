@@ -10,11 +10,11 @@ MANDATE_PATH = ROOT / "data" / "Mandate" / "mandate.json"
 OUTPUT_PATH = ROOT / "data" / "templates" / "wing_responses.json"
 
 PHASE_LABELS = {
-    "d_day": "D Day",
-    "d1_to_d5": "D+1 to D+5",
-    "d5_to_d10": "D+5 to D+10",
-    "d10_to_d20": "D+10 to D+20",
-    "d20_to_d50": "D+20 to D+50",
+    "d_minus_90": "D-90",
+    "d_minus_30": "D-30",
+    "d_day": "D-Day",
+    "d_plus_30": "D+30",
+    "d_plus_90": "D+90",
 }
 
 

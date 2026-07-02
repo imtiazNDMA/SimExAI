@@ -69,7 +69,7 @@ curl http://localhost:8000/api/wings
 # Send a chat message
 curl -X POST http://localhost:8000/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"wing_id": "ops_wing", "phase_id": "d_day", "message": "What is the current status?"}'
+  -d '{"wing_id": "ops_wing", "phase_id": "d_minus_90", "message": "What is the current status?"}'
 
 # Advance phase
 curl -X POST http://localhost:8000/api/phase/advance

@@ -37,7 +37,7 @@ Tech Early Warning · Ops Wing · Logistics · DRR · GCC · PCC · Tech E&M · 
 
 ## Timeline Phases (5)
 
-D Day → D+1–D+5 → D+5–D+10 → D+10–D+20 → D+20–D+50
+D-90 → D-30 → D-Day → D+30 → D+90
 
 ## Quick Start
 

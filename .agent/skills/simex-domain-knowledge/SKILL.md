@@ -34,11 +34,11 @@ Per Chairman NDMA's directive, each SimEx follows a **5-phase timeline**:
 
 | Phase | Time Window | Focus Area |
 |---|---|---|
-| **D Day** | Day 0 (earthquake strikes) | Immediate response, activation, first alerts |
-| **D+1 to D+5** | Days 1–5 | Search & rescue, emergency relief, initial assessment |
-| **D+5 to D+10** | Days 5–10 | Sustained relief operations, infrastructure restoration |
-| **D+10 to D+20** | Days 10–20 | Early recovery, transitional shelter, livelihood support |
-| **D+20 to D+50** | Days 20–50 | Long-term recovery, reconstruction planning, lessons learned |
+| **D-90** | Day -90 | Pre-disaster preparedness, capacity building |
+| **D-30** | Day -30 | Early warning, readiness, prepositioning |
+| **D-Day** | Day 0 (earthquake strikes) | Immediate response, activation, first alerts |
+| **D+30** | Day +30 | Sustained relief, early recovery |
+| **D+90** | Day +90 | Long-term recovery, reconstruction planning, lessons learned |
 
 ## CRM/Plans
 
@@ -61,7 +61,7 @@ Each wing must produce **Crisis Resource Management (CRM) Plans** for every phas
 | **DDMA** | District Disaster Management Authority |
 | **SitRep** | Situation Report |
 | **Inject** | A simulated event introduced during the exercise to test response |
-| **D Day** | The day the disaster event occurs |
+| **D-Day** | The day the disaster event occurs |
 
 ## Resources
 
