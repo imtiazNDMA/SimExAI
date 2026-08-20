@@ -21,3 +21,14 @@ dependencies = [
     "soundfile>=0.14.0",
     "numpy>=2.5.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Keep the default asyncio mode strict; async tests opt in with the marker.
+asyncio_mode = "strict"

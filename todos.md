@@ -127,7 +127,9 @@ Independent of each other; each is shippable alone. Do these while Phase 4 is be
 
 Start this **during Phase 3**, not after Phase 7 — Phases 4 and 5 are unmeasurable without it.
 
-- [ ] **8.1** `[M]` **(P1-10)** pytest scaffolding + CI. **Start by restoring the deleted tests**: `main` has `tests/test_document_parser.py` and `tests/test_upload_vision_endpoint.py` (243 lines) that were removed on the `RAG` branch — recover with `git checkout main -- tests/` and adapt. Then add unit tests for `mandate.normalize_wing_id`, `_parse_llm_json`, `_normalize_injects`, `ScenarioEngine` transitions, and the database layer. All pure-logic, all fast, all currently untested.
+- [x] **8.1a** `[S]` **(P1-10)** Restore the deleted tests and add pytest scaffolding. *(Done: recovered `tests/` from `main`; the 4 `test_document_parser.py` cases pass verbatim since `document_parser.py` never changed. `test_upload_vision_endpoint.py` rewritten for SQLite persistence, the async `ainvoke` path, and the D-90..D+90 phase scheme. pytest + pytest-asyncio added as a dev group. Mutation-checked: the suite fails when image attachment is broken.)*
+- [ ] **8.1b** `[M]` **(P1-10)** Extend unit coverage to the untested pure logic: `mandate.normalize_wing_id`, `_parse_llm_json`, `_normalize_injects`, `ScenarioEngine` transitions, and the database layer. Add CI.
+- [ ] **8.1c** `[S]` Declare `en_core_web_sm` in `pyproject.toml`. It is an **undeclared runtime dependency**: `uv sync` strips it, and Kokoro then re-downloads it over the network on the first TTS call. That is a silent failure in an air-gapped deployment.
 - [ ] **8.2** `[M]` Golden-set extraction eval: fixture documents with known expected injects; measure precision/recall on extraction. This is what makes prompt changes safe.
 - [ ] **8.3** `[M]` Retrieval eval: labeled query→chunk set, measure recall@k and MRR. Required to prove the Phase 4 reranker actually helps rather than assuming it.
 - [ ] **8.4** `[M]` LLM-judge eval for moderator quality: does it withhold solutions, stay in persona, ask genuine follow-ups, use retrieved context?
