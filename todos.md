@@ -34,12 +34,12 @@ Migrate the LLM client first. Everything in Phases 3–5 depends on structured o
 
 **(P0-5, P0-2)** There is currently no concept of "an exercise run." Nothing else is fixable until there is.
 
-- [ ] **1.1** `[M]` Add schema: `sessions` (id, scenario_id, wing_id, participant_label, current_phase_index, status, created_at), `messages` (id, session_id, role, content, phase_id, created_at, token_count), `inject_state` (session_id, inject_id, status, delivered_at, addressed_at), `assessments` (id, session_id, inject_id, rubric scores, evidence, gaps, created_at). Write a migration for the existing `data/simex.db`.
-- [ ] **1.2** `[S]` Add the missing `injects.status` column — `_normalize_injects` sets it (`app.py:152`) and it is silently dropped today.
+- [x] **1.1** `[M]` Add schema: `sessions` (id, scenario_id, wing_id, participant_label, current_phase_index, status, created_at), `messages` (id, session_id, role, content, phase_id, created_at, token_count), `inject_state` (session_id, inject_id, status, delivered_at, addressed_at), `assessments` (id, session_id, inject_id, rubric scores, evidence, gaps, created_at). Write a migration for the existing `data/simex.db`.
+- [x] **1.2** `[S]` Add the missing `injects.status` column — `_normalize_injects` sets it (`app.py:152`) and it is silently dropped today.
 - [ ] **1.3** `[M]` Delete the module-level `scenario` / `responder` singletons (`app.py:43-44`). Load per-session exercise state keyed by a session id; make `ScenarioEngine` an instance owned by a session, never process-global.
 - [ ] **1.4** `[S]` Thread a session id through every API route and the frontend (cookie or explicit header). Reject requests without one.
 - [ ] **1.5** `[S]` Separate **controller** actions from **participant** actions. `phase/advance`, `phase/back`, `phase/reset`, and `scenario/upload` are controller-only; today any participant can reset everyone's exercise.
-- [ ] **1.6** `[S]` `PRAGMA foreign_keys=ON` + WAL mode; indexes on `injects(scenario_id, phase_id)`, `messages(session_id)`; close connections properly (P2-3).
+- [x] **1.6** `[S]` `PRAGMA foreign_keys=ON` + WAL mode; indexes on `injects(scenario_id, phase_id)`, `messages(session_id)`; close connections properly (P2-3).
 
 ---
 
@@ -65,7 +65,7 @@ Independent of each other; each is shippable alone. Do these while Phase 4 is be
 - [ ] **3.5** `[S]` **(P1-3)** Make phase server-authoritative in `/api/chat`. Stop trusting `request.phase_id` (`app.py:448`); derive it from the session.
 - [x] **3.6** `[S]` **(P1-5)** Give extraction its own sampling config: `temperature=0`, large `max_tokens`. *(Done in Phase 0: chat 3000 / extraction 16000 @ T=0. Budgets sized for reasoning overhead — see note below.)*
 - [ ] **3.7** `[M]` **(P1-5)** Use LM Studio structured outputs (`response_format` with a JSON schema) for extraction. This should let most of `_clean_llm_json` and the `json_repair` fallback (`app.py:77-127`) be deleted — they exist to paper over 3.6.
-- [ ] **3.8** `[S]` **(P1-2)** Wrap `_read_upload_as_context` in `run_in_threadpool`. It currently blocks the event loop through full PDF rasterization and Word COM automation, freezing every other participant's request.
+- [x] **3.8** `[S]` **(P1-2)** Wrap document parsing in `run_in_threadpool`. *(Done in 27df5ab — was a hard prerequisite for upload progress polling, which the frozen loop would otherwise have blocked. Pinecone indexing moved off the loop too.)*
 - [ ] **3.9** `[M]` **(P1-4)** Cross-chunk coherence in extraction: pass prior-chunk scenario context forward, dedup injects semantically (not by renumbering ids, which hides the problem), and **fail the upload loudly** when chunks fail instead of reporting success.
 - [ ] **3.10** `[S]` **(P2-4)** Return proper HTTP status codes on upload and TTS failure instead of 200-with-an-error-message.
 - [ ] **3.11** `[S]` **(P2-5)** Fix namespace cleanup: `delete_scenario` is called with the *new* id (`app.py:352`) and is always a no-op. Delete the *previous* scenario's namespace, or add a retention job.
