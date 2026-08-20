@@ -10,7 +10,7 @@ import shutil
 import uuid
 
 from .models import ChatRequest, ChatResponse
-from .ollama_engine import OllamaEngine
+from .llm_engine import LLMEngine
 from .scenario_engine import PHASES, ScenarioEngine
 from .document_parser import parse_document
 from .mandate import MandateRegistry
@@ -41,7 +41,7 @@ app.add_middleware(
 
 # Initialize engines
 scenario = ScenarioEngine()
-responder = OllamaEngine(scenario)
+responder = LLMEngine(scenario)
 try:
     vector_store = VectorStore()
     responder.set_vector_store(vector_store)

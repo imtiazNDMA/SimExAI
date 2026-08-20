@@ -36,10 +36,14 @@ python -m http.server 3000
 
 | Variable | Default | Description |
 |---|---|---|
-| `SIMEX_PORT` | `8000` | Backend server port |
-| `SIMEX_SCENARIO` | `earthquake_batagram_7_4` | Active scenario ID |
-| `RESPONSE_ENGINE` | `template` | `template` or `ollama` (future) |
-| `OLLAMA_URL` | `http://localhost:11434` | Ollama API URL (future) |
+| `PINECONE_API_KEY` | _(none)_ | Required for RAG retrieval |
+| `PINECONE_INDEX_NAME` | `simexai` | Pinecone index |
+| `LMSTUDIO_BASE_URL` | `http://localhost:1234/v1` | LM Studio OpenAI-compatible endpoint |
+| `LMSTUDIO_MODEL` | `google/gemma-4-26b-a4b` | Model id as listed by `/v1/models` |
+| `LMSTUDIO_MAX_TOKENS` | `3000` | Chat token budget (covers reasoning + answer) |
+
+The active scenario is not an env var — it is whatever was last uploaded, tracked in
+`data/simex.db`. The server port is set by the launcher (`start.bat -Port <n>`).
 
 ## Testing Patterns
 

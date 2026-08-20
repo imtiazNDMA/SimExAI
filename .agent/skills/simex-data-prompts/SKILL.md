@@ -1,6 +1,6 @@
 ---
 name: SimEx Data and Prompts
-description: Data management and prompt engineering guide for SimEx AI — template responses, scenario data schemas, wing personas, inject events, and future Ollama prompt templates.
+description: Data management and prompt engineering guide for SimEx AI — template responses, scenario data schemas, wing personas, inject events, and LM Studio prompt construction.
 ---
 
 # SimEx Data & Prompts
@@ -17,7 +17,7 @@ data/
 │   └── wing_responses.json            # 9 wings x 5 phases responses
 ├── injects/
 │   └── earthquake_injects.json        # Timed scenario events
-└── prompts/                           # Future: Ollama prompt templates
+└── Mandate/mandate.json               # Wing mandates (source of prompt context)
     ├── moderator_system.md
     └── wing_personas/
         ├── technical_early_warning.md
@@ -121,9 +121,9 @@ Keywords to support per wing:
 - `challenges` — Current obstacles
 - `default` — Fallback response
 
-## Future: Ollama Prompt Templates
+## Prompt Construction
 
-When Ollama is integrated, each wing gets a persona prompt:
+Prompts are built in `backend/llm_engine.py` (not stored as files). Each wing's mandate is injected into the Invigilator system prompt:
 
 ```markdown
 # System Prompt: Operations and Logistic Wing (Ops & Log)
