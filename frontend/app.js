@@ -2,7 +2,9 @@
    SimexAI — Application Logic
    ═══════════════════════════════════════════════ */
 
-const API_BASE = 'http://localhost:8000/api';
+// Origin-relative: the backend serves this page, so the API is always on the
+// same host and port. Hardcoding a port breaks `start.bat -Port <n>`.
+const API_BASE = '/api';
 
 // ── State ──────────────────────────────────────
 const state = {

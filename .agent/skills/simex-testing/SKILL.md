@@ -25,7 +25,7 @@ uv sync
 
 # Run backend
 cd backend
-uvicorn app:app --reload --port 8000
+uvicorn app:app --reload --port 9897
 
 # Serve frontend (separate terminal)
 cd frontend
@@ -65,21 +65,21 @@ The active scenario is not an env var — it is whatever was last uploaded, trac
 
 ```bash
 # Get scenario info
-curl http://localhost:8000/api/scenario
+curl http://localhost:9897/api/scenario
 
 # Get all wings
-curl http://localhost:8000/api/wings
+curl http://localhost:9897/api/wings
 
 # Send a chat message
-curl -X POST http://localhost:8000/api/chat \
+curl -X POST http://localhost:9897/api/chat \
   -H "Content-Type: application/json" \
   -d '{"wing_id": "ops_wing", "phase_id": "d_minus_90", "message": "What is the current status?"}'
 
 # Advance phase
-curl -X POST http://localhost:8000/api/phase/advance
+curl -X POST http://localhost:9897/api/phase/advance
 
 # Get injects for current phase
-curl http://localhost:8000/api/injects
+curl http://localhost:9897/api/injects
 ```
 
 ### Data Validation
@@ -100,8 +100,8 @@ FROM python:3.14-slim
 WORKDIR /app
 COPY . .
 RUN pip install -e .
-EXPOSE 8000
-CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE 9897
+CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "9897"]
 ```
 
 ### Frontend Serving

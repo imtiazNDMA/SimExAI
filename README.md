@@ -60,13 +60,13 @@ start.bat
 
 This checks prerequisites, creates `.env` from `.env.example` if missing, runs `uv sync`,
 verifies the configured LLM server is reachable, starts the backend, and opens
-http://localhost:8000 once it responds.
+http://localhost:9897 once it responds.
 
 Options (passed through to `start.ps1`):
 
 | Flag | Effect |
 | --- | --- |
-| `-Port 8080` | Run on a different port (default 8000) |
+| `-Port 8080` | Run on a different port (default 9897) |
 | `-NoSync` | Skip `uv sync` for fast restarts |
 | `-NoBrowser` | Don't open the browser |
 
@@ -77,8 +77,8 @@ Options (passed through to `start.ps1`):
 uv sync
 
 # Start backend server
-uv run uvicorn backend.app:app --reload
+uv run uvicorn backend.app:app --reload --port 9897
 
 # Access the application
-# Open http://localhost:8000 in your browser
+# Open http://localhost:9897 in your browser
 ```

@@ -120,7 +120,7 @@ All data lives in `data/` as JSON:
 
 ```bash
 cd backend
-uvicorn app:app --reload --port 8000
+uvicorn app:app --reload --port 9897
 ```
 
 ## LLM Configuration

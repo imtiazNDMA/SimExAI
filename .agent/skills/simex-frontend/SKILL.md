@@ -118,10 +118,10 @@ frontend/
 
 ## API Integration
 
-All API calls go to `http://localhost:8000/api/`:
+All API calls are origin-relative — the backend serves this page, so they follow whatever port it runs on:
 
 ```javascript
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 async function sendMessage(wingId, phaseId, message) {
     const res = await fetch(`${API_BASE}/chat`, {

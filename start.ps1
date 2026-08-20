@@ -10,7 +10,7 @@
     Normally invoked via start.bat.
 
 .PARAMETER Port
-    Port for the backend. Default 8000.
+    Port for the backend. Default 9897.
 
 .PARAMETER NoSync
     Skip 'uv sync'. Use for fast restarts when dependencies haven't changed.
@@ -25,7 +25,7 @@
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = 8000,
+    [int]$Port = 9897,
     [switch]$NoSync,
     [switch]$NoBrowser
 )
@@ -147,7 +147,7 @@ Write-Step "Checking port $Port"
 $portBusy = $null -ne (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
 if ($portBusy) {
     Write-Err "Port $Port is already in use."
-    Write-Host "    Stop the process using it, or run: .\start.ps1 -Port 8001"
+    Write-Host "    Stop the process using it, or run: .\start.ps1 -Port 9898"
     exit 1
 }
 Write-Ok "Port $Port is free"
