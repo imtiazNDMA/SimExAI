@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-08-20
 **Branch:** `feature/lmstudio-migration` → PR [#2](https://github.com/imtiazNDMA/SimExAI/pull/2) (targets `RAG`, not `main`)
-**Status:** Phase 1 + 2 complete and verified (16 tests passing, browser-verified transcript restore).
+**Status:** Phases 1 + 2 complete; Phase 3 is 7/11 (30 tests passing).
 
 This file is the entry point for a new session in any tool (Claude Code, opencode, etc.).
 It records **what is true now** and **what is not obvious from the code**. It deliberately
@@ -21,12 +21,12 @@ does not restate content that already lives elsewhere:
 
 SimEx AI is an AI-moderated disaster simulation exercise chatbot for NDMA Pakistan. A
 controller uploads a scenario document; participants representing NDMA wings chat with an
-AI "Lead Moderator" that is supposed to challenge and evaluate them. **It currently does
-not evaluate anyone** — the system is a stateless prompt proxy with one retrieval call
-attached: no conversation memory, no scoring, no agent loop, and a RAG pipeline that
+AI "Lead Moderator" that is supposed to challenge and evaluate them. Sessions, shared
+exercise state, transcript memory, and wing-targeted inject selection now exist, but it
+still **does not evaluate anyone**: there is no scoring or agent loop, and the RAG pipeline
 indexes the model's own summary rather than the uploaded document. `review.md` documents
-this in detail. The work in flight is turning it into an actual agentic product, phase by
-phase.
+the remaining gap. The work in flight is turning it into an actual agentic product, phase
+by phase.
 
 ---
 
@@ -37,7 +37,7 @@ phase.
 | 0 — Enabling infrastructure | **6/6 ✅** | Ollama → LM Studio, launcher |
 | 1 — Sessions and persistence | **6/6 ✅** | Schema + full route wiring; first session = controller |
 | 2 — Conversation memory | **4/4 ✅** | History persisted + windowed, transcript restore, inject ledger |
-| 3 — Correctness fixes | 4/11 | 3.1, 3.5, 3.6, 3.8 done |
+| 3 — Correctness fixes | **7/11** | 3.1–3.6 except 3.7, plus 3.8 done |
 | 4 — RAG rebuild | 0/9 | The reranker work |
 | 5 — The agent loop | 0/6 | Tool calling verified as viable |
 | 6 — Safety and guardrails | 0/7 | |
@@ -101,15 +101,40 @@ being re-raised. 16 tests pass, including 4 HTTP-contract tests covering persist
 windowing, transcript restore, and the ledger. The Phase 1 `FakeResponder` and the
 `RecordingLLM` fake both exercise the real route seam.
 
+**Wing-targeted inject selection — Phase 3.2–3.4 complete.** Extraction now drops
+unknown `required_wings` values with an inject-specific warning before they reach SQLite
+or Pinecone. `ScenarioEngine` filters phase injects by canonical wing while preserving
+untargeted legacy injects as global. The moderator prompt, inject ledger, phase responses,
+and `/api/injects` endpoint all use that filter. Prompt selection no longer slices the
+first six records: injects rank by severity, then by their real Pinecone retrieval hit
+score, and fit an approximate 1,200-token context budget. RAG candidates are also
+filtered against persisted inject targeting before entering the prompt. Five focused
+tests cover normalization, engine/HTTP/RAG filtering, ordering, and budget enforcement.
+
+**Moderator output quality reworked.** The previous prompt duplicated a large mandate
+dump and told even greeting turns to "appraise" the participant. In the live forest-fire
+exercise this produced repetitive questions about data streams, indices, dashboards, and
+calibration instead of the scenario. The prompt now uses one compact mandate role boundary,
+scenario-first source priority, and explicit `orientation` / `phase_briefing` / `discussion`
+turn objectives. It asks at most one command-level question focused on priorities,
+decisions, trade-offs, ownership, outcomes, or contingencies. A targeted quality gate gives
+only drafts that introduce unsupported specialist mechanics or stock phrasing one rewrite
+pass. Repeated three-turn live probes stayed grounded in the forest-fire outlook and
+converted vague coordination answers into preparedness-outcome questions, including one
+run while Pinecone was temporarily unreachable. The quality rewrite uses a dedicated
+60-second/no-retry client; invalid or failed rewrites fall back to a safe command-level
+question. Nine deterministic prompt tests protect mandate deduplication, greeting variants,
+participant/inject/history technical exceptions, assistant-hallucination isolation, rewrite
+validation/fallback, stock-phrase false positives, and fallback variation.
+
 ---
 
 ## 3. Immediate next step
 
-**Phase 3 (correctness fixes)** — Phase 2 is done. 3.2, 3.3, 3.4, 3.7, 3.9, 3.10, 3.11
-remain. **3.4** (`required_wings` filtering) pairs naturally with **3.3** (mandate-ranked
-inject selection) and both sharpen what Phase 5.4 needs. Do these while Phase 4 (RAG
-rebuild) is being designed; Phase 8.1b (unit coverage of `ScenarioEngine`, DB layer) can
-ride along.
+**Finish Phase 3.** Remaining tasks are 3.7 (structured extraction output), 3.9
+(cross-chunk coherence and loud partial failure), 3.10 (proper upload/TTS HTTP errors),
+and 3.11 (delete the previous Pinecone namespace). Start with 3.7 because it simplifies
+the extraction path before 3.9 changes its chunk orchestration.
 
 ### Design decisions already made (do not re-litigate)
 
@@ -207,7 +232,7 @@ start.bat -Port 8080      # different port
 start.bat -NoSync         # skip uv sync, fast restart
 start.bat -NoBrowser      # no browser
 
-.venv/Scripts/python.exe -m pytest tests/ -q     # 16 tests, ~4s
+.venv/Scripts/python.exe -m pytest tests/ -q     # 30 tests, ~4s
 ```
 
 **Prerequisites:** LM Studio running with an OpenAI-compatible server at

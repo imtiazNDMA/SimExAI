@@ -30,6 +30,7 @@ const state = {
   messages:    {},  // { wingId: [{ type, text, wingName, time }] }
   session:     null,
 };
+let injectRequestVersion = 0;
 
 // ── DOM ────────────────────────────────────────
 const $  = (sel) => document.querySelector(sel);
@@ -481,6 +482,7 @@ function selectWing(wingId) {
   chatInput.focus();
 
   renderMessages();
+  loadInjects(wingId);
 
   if (!state.messages[wingId] || state.messages[wingId].length === 0) {
     sendGreeting(wingId);
@@ -770,8 +772,11 @@ btnReset.addEventListener('click', async () => {
 });
 
 // ── Injects ────────────────────────────────────
-async function loadInjects() {
-  const data = await api('/injects');
+async function loadInjects(wingId = state.activeWing?.id || state.session?.wing_id) {
+  const requestVersion = ++injectRequestVersion;
+  const query = wingId ? `?wing_id=${encodeURIComponent(wingId)}` : '';
+  const data = await api(`/injects${query}`);
+  if (requestVersion !== injectRequestVersion) return;
   if (data) { state.injects = data.injects; renderInjects(); }
 }
 

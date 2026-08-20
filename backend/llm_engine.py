@@ -24,6 +24,41 @@ PROFANITY_PATTERNS = [
 ]
 
 PROFANITY_RE = re.compile("|".join(PROFANITY_PATTERNS), re.IGNORECASE)
+INJECT_CONTEXT_TOKEN_BUDGET = 1200
+SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
+RETRIEVAL_CANDIDATE_COUNT = 30
+RETRIEVAL_CONTEXT_LIMIT = 5
+STOCK_RESPONSE_RE = re.compile(
+    r"(?:^\s*acknowledged\b|\bbased on your mandate\b|"
+    r"\bwhat are your next steps\b|\bhow do you intend to\b)",
+    re.IGNORECASE | re.MULTILINE,
+)
+TECHNICAL_CONCEPT_PATTERNS = {
+    "algorithm": re.compile(r"\balgorithms?\b", re.IGNORECASE),
+    "api": re.compile(r"\bapis?\b", re.IGNORECASE),
+    "calibration": re.compile(r"\bcalibrat\w*\b", re.IGNORECASE),
+    "dashboard": re.compile(r"\bdashboards?\b", re.IGNORECASE),
+    "database": re.compile(r"\bdatabases?\b", re.IGNORECASE),
+    "data stream": re.compile(r"\bdata streams?\b", re.IGNORECASE),
+    "drone": re.compile(r"\bdrones?\b", re.IGNORECASE),
+    "geospatial": re.compile(r"\bgeospatial\b", re.IGNORECASE),
+    "gis": re.compile(r"\bgis\b", re.IGNORECASE),
+    "index": re.compile(r"\b(?:index|indices)\b", re.IGNORECASE),
+    "lidar": re.compile(r"\blidar\b", re.IGNORECASE),
+    "model": re.compile(r"\bmodels?\b", re.IGNORECASE),
+    "parameter": re.compile(r"\bparameters?\b", re.IGNORECASE),
+    "platform": re.compile(r"\bplatforms?\b", re.IGNORECASE),
+    "protocol": re.compile(r"\bprotocols?\b", re.IGNORECASE),
+    "remote sensing": re.compile(r"\bremote sensing\b", re.IGNORECASE),
+    "satellite": re.compile(r"\bsatellite\w*\b", re.IGNORECASE),
+    "sensor": re.compile(r"\bsensors?\b", re.IGNORECASE),
+    "software": re.compile(r"\bsoftware\b", re.IGNORECASE),
+    "sop": re.compile(r"\bsops?\b", re.IGNORECASE),
+    "technical product": re.compile(r"\btechnical products?\b", re.IGNORECASE),
+    "threshold": re.compile(r"\bthresholds?\b", re.IGNORECASE),
+    "tool": re.compile(r"\btools?\b", re.IGNORECASE),
+    "workflow": re.compile(r"\bworkflows?\b", re.IGNORECASE),
+}
 
 
 class LLMEngine:
@@ -58,6 +93,7 @@ class LLMEngine:
         self.api_key = os.getenv("LMSTUDIO_API_KEY", "lm-studio")  # LM Studio ignores the value
         self.timeout_seconds = timeout_seconds or int(os.getenv("LMSTUDIO_TIMEOUT_SECONDS", "180"))
         self.upload_timeout_seconds = int(os.getenv("LMSTUDIO_UPLOAD_TIMEOUT_SECONDS", "600"))
+        self.rewrite_timeout_seconds = int(os.getenv("LMSTUDIO_REWRITE_TIMEOUT_SECONDS", "60"))
         self.temperature = float(os.getenv("LMSTUDIO_TEMPERATURE", "0.45"))
         self.top_p = float(os.getenv("LMSTUDIO_TOP_P", "0.9"))
         self.max_tokens = int(os.getenv("LMSTUDIO_MAX_TOKENS", "3000"))
@@ -65,7 +101,14 @@ class LLMEngine:
         # to hold every inject in a long scenario document.
         self.upload_temperature = float(os.getenv("LMSTUDIO_UPLOAD_TEMPERATURE", "0"))
         self.upload_max_tokens = int(os.getenv("LMSTUDIO_UPLOAD_MAX_TOKENS", "16000"))
+        self.rewrite_max_tokens = int(os.getenv("LMSTUDIO_REWRITE_MAX_TOKENS", "2500"))
         self.llm = self._build_llm(self.timeout_seconds)
+        self.rewrite_llm = self._build_llm(
+            self.rewrite_timeout_seconds,
+            temperature=0.2,
+            max_tokens=self.rewrite_max_tokens,
+            max_retries=0,
+        )
         self.upload_llm = self._build_llm(
             self.upload_timeout_seconds,
             temperature=self.upload_temperature,
@@ -77,6 +120,7 @@ class LLMEngine:
         timeout_seconds: int,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        max_retries: int = 1,
     ) -> ChatOpenAI:
         return ChatOpenAI(
             base_url=self.base_url,
@@ -87,7 +131,7 @@ class LLMEngine:
             top_p=self.top_p,
             max_tokens=self.max_tokens if max_tokens is None else max_tokens,
             timeout=timeout_seconds,
-            max_retries=1,
+            max_retries=max_retries,
         )
 
     def _normalize_base_url(self, value: str) -> str:
@@ -167,21 +211,48 @@ class LLMEngine:
 
         phase = self._get_phase(phase_id)
         is_phase_change = self._is_phase_change_prompt(user_message)
+        turn_mode = (
+            "phase_briefing"
+            if is_phase_change
+            else "orientation"
+            if self._is_greeting(user_message) and not history
+            else "discussion"
+        )
         
         retrieved_chunks = []
         if self.vector_store:
             scenario_id = getattr(self.scenario, 'scenario_id', None)
             if scenario_id:
+                inject_count = len(self.scenario.injects_data.get("injects", []))
                 retrieved_chunks = self.vector_store.retrieve(
                     query=user_message,
                     scenario_id=scenario_id,
-                    top_k=5
+                    top_k=max(
+                        RETRIEVAL_CANDIDATE_COUNT,
+                        inject_count + RETRIEVAL_CONTEXT_LIMIT,
+                    ),
                 )
+                retrieved_chunks = self._filter_retrieved_chunks_for_wing(
+                    retrieved_chunks, wing_id, phase_id
+                )
+
+        grounding_text = self._build_grounding_text(
+            wing_id, phase, user_message, retrieved_chunks, history
+        )
 
         messages = [
             SystemMessage(content=self._build_system_prompt(wing_name, wing_id, phase_id)),
             *self._build_history_messages(history),
-            HumanMessage(content=self._build_user_prompt(wing_id, wing_name, phase, user_message, is_phase_change, retrieved_chunks, inject_ledger)),
+            HumanMessage(content=self._build_user_prompt(
+                wing_id,
+                wing_name,
+                phase,
+                user_message,
+                is_phase_change,
+                retrieved_chunks,
+                inject_ledger,
+                turn_mode,
+            )),
         ]
 
         try:
@@ -195,6 +266,17 @@ class LLMEngine:
         content = self._extract_content(result)
         content = self._strip_thinking(content)
         content = self._sanitize_output(content, suppress_welcome=is_phase_change)
+        if content and self._needs_conversational_revision(
+            content, user_message, grounding_text
+        ):
+            content = self._revise_response(
+                messages,
+                content,
+                user_message,
+                grounding_text,
+                history,
+                suppress_welcome=is_phase_change,
+            )
         return content or "I could not generate a useful response. Please try again with a clearer exercise question."
 
     def _get_phase(self, phase_id: str) -> dict:
@@ -202,6 +284,33 @@ class LLMEngine:
             if phase["id"] == phase_id:
                 return phase
         return self.scenario.get_current_phase()
+
+    def _build_grounding_text(
+        self,
+        wing_id: str,
+        phase: dict,
+        user_message: str,
+        retrieved_chunks: list[dict],
+        history: list[dict] | None = None,
+    ) -> str:
+        scenario_data = (
+            getattr(self.scenario, "scenario_data", None)
+            or self.scenario.get_scenario_info()
+        )
+        injects = self.scenario.get_injects_for_phase(phase["id"], wing_id)
+        parts = [self._format_scenario_context(scenario_data), user_message]
+        parts.extend(
+            f"{inject.get('title', '')} {inject.get('description', '')}"
+            for inject in injects
+        )
+        parts.extend(str(chunk.get("text", "")) for chunk in retrieved_chunks)
+        parts.extend(
+            str(turn.get("content", ""))
+            for turn in (history or [])[-12:]
+            if turn.get("role") == "user"
+            and turn.get("phase_id") == phase["id"]
+        )
+        return "\n".join(parts)
 
     def _build_history_messages(self, history: list[dict] | None) -> list:
         """Convert persisted turns to LLM messages with a bounded context window.
@@ -237,64 +346,120 @@ class LLMEngine:
                 messages.append(HumanMessage(content=content))
         return messages
 
+    def _filter_retrieved_chunks_for_wing(
+        self, chunks: list[dict], wing_id: str, phase_id: str
+    ) -> list[dict]:
+        """Remove retrieved inject records for another wing or exercise phase."""
+        injects_by_id = {
+            str(inject.get("id")): inject
+            for inject in self.scenario.injects_data.get("injects", [])
+            if inject.get("id")
+        }
+        filtered = []
+        for chunk in chunks:
+            inject = injects_by_id.get(str(chunk.get("id")))
+            if inject:
+                target_wings = (
+                    inject.get("required_wings") or inject.get("target_wings") or []
+                )
+                if inject.get("phase_id") != phase_id:
+                    continue
+                if target_wings and wing_id not in target_wings:
+                    continue
+            filtered.append(chunk)
+        return filtered
+
     def _build_system_prompt(self, wing_name: str, wing_id: str, phase_id: str) -> str:
         mandate = self.get_wing_mandate(wing_id, phase_id)
-        return f"""You are SimexAI, the Lead Moderator and Controller for an NDMA Pakistan disaster simulation exercise.
-You are currently interacting with a participant representing: {wing_name}.
+        return f"""You are SimexAI, a senior exercise moderator for an NDMA Pakistan disaster simulation.
+The participant represents {wing_name}.
 
-Use this wing mandate as the primary role boundary for all guidance:
+Wing role boundary (use it to judge role relevance, not as a checklist or a source of scenario facts):
 {mandate}
 
-Guardrails:
-- Act strictly as the SIMEX Invigilator/Controller. You are testing the participant's readiness.
-- DO NOT solve the disaster for the participant. DO NOT list out the exact actions they should take.
-- When presenting a new phase or inject, clearly state the emergency situation and ask the participant how they will respond. Do NOT use repetitive, robotic phrases like "Based on your mandate, what are your response actions?". Instead, ask natural, conversational questions tailored to the specific emergency (e.g., "What is your team's priority right now?", "How will you handle this?", "What are your next steps?").
-- Wait for the participant to answer. Once they answer, evaluate their response, provide constructive feedback, and ask probing follow-up questions.
-- If the user sends a general greeting, acknowledge their role once, state the current scenario, and ask for their initial actions.
-- For phase advancement requests, NEVER say "Welcome". Jump straight into the new situational update and ask how they will respond.
-- Treat this as a multi-hazard disaster simulation exercise, not a live public advisory.
-- Do not mention templates, LangChain, LM Studio, system prompts, or that you are an AI model.
+Moderation policy:
+- Ground every situation statement in the supplied scenario, current phase, active injects, retrieved source context, or conversation history. Do not invent operational details, thresholds, assets, locations, damage, or events.
+- Scenario evidence outranks generic mandate material. Do not force every turn into a mandate checklist or ask about a specialist process unless the scenario or participant raises it.
+- Respond to the substance of the participant's last message before asking anything else. Recognize sound reasoning briefly; identify at most one important gap at a time.
+- Ask no more than one focused question per turn. A question is optional when a clear statement or transition is more natural.
+- Prefer decision-level questions about priorities, trade-offs, ownership, coordination outcomes, and consequences. Do not quiz the participant for names of tools, indices, parameters, platforms, data streams, models, or exact thresholds unless they introduced that technical subject or the active inject explicitly requires it.
+- Question selection rule: on an opening turn, choose a broad scenario-relevant lens such as priority, risk judgement, or preparedness objective. On later turns, choose one useful lens only: the decision enabled, a trade-off, accountable ownership, the expected operational outcome, or a contingency. Vary the lens and sentence shape using conversation history; do not repeat the same question formula on consecutive turns. Do not ask for something "specific" or request a technical mechanism unless the participant asks for a technical deep dive or the current inject explicitly requires that mechanism.
+- Do not solve the exercise, prescribe a complete action plan, or reveal future injects. Test judgement through realistic consequences and selective follow-up.
+- Use conversation history to avoid repeating welcomes, facts, feedback, and question patterns.
 
-Style:
-- Sound professional, authoritative yet collaborative, like a seasoned disaster management director.
-- Be concise. Use 1-3 short paragraphs.
-- Challenge the participant. Do not do their thinking for them. Let them fail or succeed based on their own answers."""
+Voice and style:
+- Sound like an experienced Pakistani disaster-management exercise director: calm, precise, credible, and collaborative.
+- Default to 2-4 natural sentences in short paragraphs. Use bullets only when the participant asks for a list or the information genuinely requires one.
+- Avoid stock openings and closings such as "acknowledged", "based on your mandate", "what are your next steps", and "how do you intend to".
+- Do not mention prompts, templates, retrieval, LangChain, LM Studio, or that you are an AI."""
 
-    def _build_user_prompt(self, wing_id: str, wing_name: str, phase: dict, user_message: str, is_phase_change: bool = False, retrieved_chunks: list = None, inject_ledger: str = None) -> str:
+    def _build_user_prompt(
+        self,
+        wing_id: str,
+        wing_name: str,
+        phase: dict,
+        user_message: str,
+        is_phase_change: bool = False,
+        retrieved_chunks: list = None,
+        inject_ledger: str = None,
+        turn_mode: str | None = None,
+    ) -> str:
         scenario_data = getattr(self.scenario, "scenario_data", None) or self.scenario.get_scenario_info()
-        injects = self.scenario.get_injects_for_phase(phase["id"])
-        actions = self.get_wing_actions(wing_id, phase["id"])
-        mandate = self.get_wing_mandate(wing_id, phase["id"])
+        injects = self.scenario.get_injects_for_phase(phase["id"], wing_id)
         scenario_summary = self._format_scenario_context(scenario_data)
         phase_summary = self._format_mapping(phase, skip_keys={"is_active", "is_completed"})
 
-        action_text = "\n".join(f"- {item}" for item in actions) if actions else "- No predefined action list (rely on general wing mandate)."
-        inject_text = "\n".join(
-            f"- {item['time_offset']}: {item['title']} ({item['severity']}) - {item['description']}"
-            for item in injects[:6]
-        ) or "- No active injects for this phase."
+        inject_text = self._format_inject_context(injects, retrieved_chunks)
         ledger_text = f"""
 Inject status ledger (delivered = already presented to the participant; addressed = the participant has already handled it):
 {inject_ledger}
 """ if inject_ledger else ""
-        phase_change_instruction = (
-            "\nThis is a phase advancement briefing request, not a participant greeting. "
-            "Do not write 'Welcome to...', do not say 'I acknowledge your presence/role', "
-            "and do not repeat the exercise title. Begin with the new phase and immediate priorities.\n"
-            if is_phase_change else ""
+        turn_mode = turn_mode or (
+            "phase_briefing"
+            if is_phase_change
+            else "orientation"
+            if self._is_greeting(user_message)
+            else "discussion"
         )
+        turn_instructions = {
+            "orientation": (
+                "Open with a concise situation orientation grounded in the scenario and the "
+                "highest-priority current inject. Ask one broad command-level opening question "
+                "suited to this scenario; vary between priority, risk judgement, and preparedness "
+                "objective rather than using a fixed formula. Keep it answerable without naming a "
+                "technical method unless the inject requires one. Do not appraise, quiz them on a "
+                "niche mandate function, or list recommended actions."
+            ),
+            "phase_briefing": (
+                "Brief only what has materially changed in this phase, without another welcome "
+                "or role acknowledgement. End with one decision question tied to the changed "
+                "conditions; do not list a complete response plan."
+            ),
+            "discussion": (
+                "Respond directly to the participant's substance. Briefly note one sound element "
+                "or one consequential gap using scenario evidence. Ask one follow-up only if it "
+                "advances a decision, trade-off, ownership commitment, or scenario consequence; "
+                "prefer asking what decision or operational outcome their work must enable. Do not "
+                "turn a broad operational answer into a technical-detail quiz or ask which tools, "
+                "data, indices, parameters, models, platforms, workflows, or technical products "
+                "they will use unless that detail is explicit in the current inject. For coordination "
+                "answers, test the preparedness decision or outcome that coordination must enable. "
+                "Otherwise provide the natural consequence or transition."
+            ),
+        }[turn_mode]
 
         rag_section = ""
         if retrieved_chunks:
             rag_text = "\n".join(
-                f"- [{c['score']:.2f}] {c['text']}" for c in retrieved_chunks
+                f"- [{c['score']:.2f}] {c['text']}"
+                for c in retrieved_chunks[:RETRIEVAL_CONTEXT_LIMIT]
             )
             rag_section = f"""
 Retrieved context from scenario documents (use as primary reference):
 {rag_text}
 """
 
-        return f"""Exercise context:
+        return f"""Authoritative scenario evidence:
 {scenario_summary}
 {rag_section}
 Current phase timeline:
@@ -302,17 +467,60 @@ Current phase timeline:
 
 Participant's Wing: {wing_name}
 
-Wing mandate and functions:
-{mandate}
-
-Active injects the participant must handle:
+Current injects relevant to this wing:
 {inject_text}
 {ledger_text}
-Participant from {wing_name} says:
+Participant message:
 {user_message}
-{phase_change_instruction}
 
-Respond to the participant now as the SIMEX Moderator. Appraise their response, guide them, and steer the conversation clearly towards addressing the active disaster scenario context and injects. DO NOT reference seismic or earthquake actions if the scenario is clearly about a different disaster (e.g. Cyclone, Flood, etc.). Rely entirely on the uploaded scenario data."""
+Turn objective ({turn_mode}):
+{turn_instructions}
+
+Respond now in natural prose. Stay within the evidence above and do not introduce a different hazard."""
+
+    def _format_inject_context(
+        self,
+        injects: list[dict],
+        retrieved_chunks: list[dict] | None = None,
+        token_budget: int = INJECT_CONTEXT_TOKEN_BUDGET,
+    ) -> str:
+        """Rank wing-relevant injects and fit them into an approximate token budget."""
+        if not injects:
+            return "- No active injects for this phase."
+
+        retrieval_scores = {
+            str(chunk.get("id")): float(chunk.get("score") or 0)
+            for chunk in (retrieved_chunks or [])
+            if chunk.get("id")
+        }
+        ranked = sorted(
+            enumerate(injects),
+            key=lambda pair: (
+                SEVERITY_RANK.get(str(pair[1].get("severity", "")).upper(), 0),
+                retrieval_scores.get(str(pair[1].get("id")), 0),
+                -pair[0],
+            ),
+            reverse=True,
+        )
+
+        lines = []
+        remaining_tokens = token_budget
+        for _, item in ranked:
+            line = (
+                f"- {item.get('time_offset', 'TBD')}: {item.get('title', 'Untitled inject')} "
+                f"({item.get('severity', 'MEDIUM')}) - {item.get('description', '')}"
+            )
+            estimated_tokens = max(1, (len(line) + 3) // 4)
+            if estimated_tokens <= remaining_tokens:
+                lines.append(line)
+                remaining_tokens -= estimated_tokens
+                continue
+            if not lines and remaining_tokens > 1:
+                max_chars = remaining_tokens * 4
+                lines.append(f"{line[:max_chars - 3].rstrip()}...")
+                break
+
+        return "\n".join(lines) or "- No active injects fit the context budget."
 
     def _format_scenario_context(self, scenario_data: dict) -> str:
         lines = []
@@ -385,6 +593,165 @@ Respond to the participant now as the SIMEX Moderator. Appraise their response, 
             or "advanced to phase" in normalized
             or ("advanced to" in normalized and "phase" in normalized)
         )
+
+    def _is_greeting(self, text: str) -> bool:
+        normalized = re.sub(r"[^a-z]+", " ", (text or "").lower()).strip()
+        greetings = {
+            "hello",
+            "hi",
+            "hey",
+            "greetings",
+            "salam",
+            "assalam o alaikum",
+            "assalam u alaikum",
+        }
+        if normalized in greetings:
+            return True
+        courtesy_words = {
+            "all", "afternoon", "everyone", "evening", "good", "morning", "team", "there"
+        }
+        for greeting in sorted(greetings, key=len, reverse=True):
+            if normalized.startswith(f"{greeting} "):
+                remainder = normalized[len(greeting):].strip().split()
+                return bool(remainder) and set(remainder).issubset(courtesy_words)
+        return False
+
+    def _technical_concepts(self, text: str) -> set[str]:
+        return {
+            name
+            for name, pattern in TECHNICAL_CONCEPT_PATTERNS.items()
+            if pattern.search(text or "")
+        }
+
+    def _needs_conversational_revision(
+        self, content: str, user_message: str, grounding_text: str
+    ) -> bool:
+        if content.count("?") > 1 or STOCK_RESPONSE_RE.search(content):
+            return True
+        if any(
+            re.search(r"\bspecific\b", question, re.IGNORECASE)
+            for question in re.findall(r"[^.!?]*\?", content)
+        ) and not re.search(r"\bspecific\b", user_message or "", re.IGNORECASE):
+            return True
+        unsupported = self._technical_concepts(content) - self._technical_concepts(
+            grounding_text
+        )
+        return bool(unsupported)
+
+    def _revise_response(
+        self,
+        messages: list,
+        draft: str,
+        user_message: str,
+        grounding_text: str,
+        history: list[dict] | None = None,
+        suppress_welcome: bool = False,
+    ) -> str:
+        supported_concepts = ", ".join(sorted(self._technical_concepts(grounding_text)))
+        supported_concepts = supported_concepts or "none"
+        revision_request = HumanMessage(content=f"""Rewrite the moderator draft below before it is shown.
+
+Participant message:
+{user_message}
+
+Draft:
+{draft}
+
+Technical concepts explicitly supported by the participant, scenario, retrieved evidence, or current inject:
+{supported_concepts}
+
+Keep valid scenario facts and concise feedback. Remove unsupported specialist mechanisms, tools, data sources, indices, parameters, models, platforms, thresholds, protocols, workflows, or technical products; preserve any concept listed as supported above when it is relevant. Replace the question with at most one natural command-level question about a priority, decision, trade-off, accountable owner, operational outcome, or contingency. Do not use the word "specific" unless the participant did. Use 2-4 natural sentences and output only the rewritten response.""")
+        try:
+            result = self.rewrite_llm.invoke([
+                *messages,
+                AIMessage(content=draft),
+                revision_request,
+            ])
+        except Exception:
+            return self._safe_response_fallback(
+                draft, user_message, grounding_text, history
+            )
+        revised = self._extract_content(result)
+        revised = self._strip_thinking(revised)
+        revised = self._sanitize_output(revised, suppress_welcome=suppress_welcome)
+        if revised and not self._needs_conversational_revision(
+            revised, user_message, grounding_text
+        ):
+            return revised
+        return self._safe_response_fallback(
+            draft, user_message, grounding_text, history
+        )
+
+    def _safe_response_fallback(
+        self,
+        draft: str,
+        user_message: str,
+        grounding_text: str,
+        history: list[dict] | None = None,
+    ) -> str:
+        supported = self._technical_concepts(grounding_text)
+        safe_statements = []
+        for sentence in re.split(r"(?<=[.!?])\s+", draft or ""):
+            if "?" in sentence or STOCK_RESPONSE_RE.search(sentence):
+                continue
+            if self._technical_concepts(sentence) - supported:
+                continue
+            if sentence.strip():
+                safe_statements.append(sentence.strip())
+            if len(safe_statements) == 2:
+                break
+
+        lowered = (user_message or "").lower()
+        if any(word in lowered for word in ("coordinate", "coordination", "department")):
+            questions = [
+                "What preparedness outcome should that coordination achieve?",
+                "Which decision should that coordination unlock?",
+                "Who is accountable for turning that coordination into action?",
+            ]
+        elif any(word in lowered for word in ("assess", "review", "verify", "identify", "map")):
+            questions = [
+                "What decision should that assessment enable?",
+                "Which preparedness choice depends on that assessment?",
+                "What should change once that assessment is complete?",
+            ]
+        elif "priority" in lowered:
+            questions = [
+                "What trade-off could affect that priority?",
+                "Who owns the decision behind that priority?",
+                "What outcome will show that priority was correct?",
+            ]
+        else:
+            questions = [
+                "What operational outcome should follow from that approach?",
+                "What decision must that approach support?",
+                "What consequence would make you adjust that approach?",
+            ]
+        prior_text = " ".join(
+            str(turn.get("content", "")) for turn in (history or [])
+        ).lower()
+        available = [
+            candidate for candidate in questions if candidate.lower() not in prior_text
+        ]
+        if available:
+            question = available[0]
+        else:
+            latest_assistant = next(
+                (
+                    str(turn.get("content", "")).lower()
+                    for turn in reversed(history or [])
+                    if turn.get("role") == "assistant"
+                ),
+                "",
+            )
+            alternatives = [
+                candidate
+                for candidate in questions
+                if candidate.lower() not in latest_assistant
+            ]
+            question = (alternatives or questions)[
+                len(history or []) % len(alternatives or questions)
+            ]
+        return " ".join([*safe_statements, question])
 
     def _sanitize_output(self, text: str, suppress_welcome: bool = False) -> str:
         cleaned = PROFANITY_RE.sub("[filtered]", text or "").strip()

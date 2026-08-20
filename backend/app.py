@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import asyncio
 import json
+import logging
 import re
 import shutil
 import time
@@ -74,6 +75,7 @@ except Exception as e:
 DATA_DIR = Path(__file__).parent.parent / "data"
 PHASE_IDS = {phase["id"] for phase in PHASES}
 mandates = MandateRegistry()
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -307,9 +309,28 @@ def _normalize_injects(injects: list, scenario_id: str) -> list[dict]:
         item["description"] = item.get("description") or "Scenario-derived inject."
         item["severity"] = str(item.get("severity") or "MEDIUM").upper()
         item["status"] = item.get("status") or "pending"
+        raw_wings = item.get("required_wings") or item.get("target_wings") or []
+        if isinstance(raw_wings, str):
+            raw_wings = [raw_wings]
+        rejected_wings = [
+            str(value) for value in raw_wings
+            if value and mandates.normalize_wing_id(value) is None
+        ]
+        if rejected_wings:
+            logger.warning(
+                "Dropped unknown required_wings from inject %s: %s",
+                item["id"],
+                ", ".join(rejected_wings),
+            )
         item["required_wings"] = mandates.normalize_wing_ids(
-            item.get("required_wings") or item.get("target_wings") or []
+            raw_wings, keep_unknown=False
         )
+        if raw_wings and not item["required_wings"]:
+            logger.warning(
+                "Dropped inject %s because it has no valid required_wings",
+                item["id"],
+            )
+            continue
         normalized.append(item)
     return normalized
 
@@ -651,7 +672,7 @@ def advance_phase(context: ControllerDep):
         "message": f"Advanced to {next_phase['label']}",
         "current_phase": next_phase,
         "phases": context.scenario.get_all_phases(),
-        "injects": context.scenario.get_current_injects(),
+        "injects": context.scenario.get_current_injects(context.session.get("wing_id")),
     }
 
 
@@ -672,7 +693,7 @@ def go_back_phase(context: ControllerDep):
         "message": f"Returned to {prev_phase['label']}",
         "current_phase": prev_phase,
         "phases": context.scenario.get_all_phases(),
-        "injects": context.scenario.get_current_injects(),
+        "injects": context.scenario.get_current_injects(context.session.get("wing_id")),
     }
 
 
@@ -685,7 +706,7 @@ def reset_phases(context: ControllerDep):
         "message": "Exercise reset to D-90",
         "scenario": context.scenario.get_scenario_info(),
         "phases": context.scenario.get_all_phases(),
-        "injects": context.scenario.get_current_injects(),
+        "injects": context.scenario.get_current_injects(context.session.get("wing_id")),
     }
 
 
@@ -723,7 +744,7 @@ def chat(request: ChatRequest, context: SessionDep) -> ChatResponse:
         if message.get("wing_id") in (None, wing_id)
     ]
 
-    injects = context.scenario.get_current_injects()
+    injects = context.scenario.get_current_injects(wing_id)
     mark_injects_delivered(context.session["id"], [inject["id"] for inject in injects])
     for inject in injects:
         if inject.get("title") and inject["title"].lower() in request.message.lower():
@@ -763,10 +784,15 @@ def get_session_messages(context: SessionDep):
 
 
 @app.get("/api/injects")
-def get_injects(context: SessionDep):
+def get_injects(context: SessionDep, wing_id: str | None = None):
     """Get inject events for the current phase."""
+    selected_wing = context.session.get("wing_id")
+    if wing_id:
+        selected_wing = _resolve_wing(context, wing_id)
+        if context.session.get("role") != "controller":
+            _bind_session_wing(context, selected_wing)
     phase = context.scenario.get_current_phase()
-    injects = context.scenario.get_current_injects()
+    injects = context.scenario.get_current_injects(selected_wing)
     return {
         "phase": phase,
         "injects": injects,

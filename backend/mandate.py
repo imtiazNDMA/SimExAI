@@ -136,27 +136,12 @@ class MandateRegistry:
         return normalized
 
     def format_mandate_for_prompt(self, wing_id: str, phase_id: str) -> str:
+        """Return a compact role boundary rather than an exhaustive checklist."""
         wing = self.get_wing(wing_id)
         if not wing:
             return "No mandate found for this wing."
 
-        responsibilities = self.get_phase_responsibilities(wing_id, phase_id)
-        actions = self.get_wing_actions(wing_id, phase_id)
-        key_functions = wing.get("key_functions", [])
-        directorates = wing.get("directorates", [])
-
-        sections = [
-            f"Mandate scope: {wing.get('mandate_scope', 'Not specified')}",
-        ]
-        if directorates:
-            sections.append("Directorates:\n" + self._bullets(directorates))
-        if responsibilities:
-            sections.append("Phase-relevant mandate responsibilities:\n" + self._bullets(responsibilities))
-        if key_functions:
-            sections.append("Key functions:\n" + self._bullets(key_functions))
-        if actions:
-            sections.append("Current SimEx action expectations:\n" + self._bullets(actions))
-        return "\n\n".join(sections)
+        return f"Mandate scope: {wing.get('mandate_scope', 'Not specified')}"
 
     def _bullets(self, items: Iterable[str]) -> str:
         return "\n".join(f"- {item}" for item in items)
