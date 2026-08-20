@@ -1,12 +1,16 @@
 """SimEx AI Backend — FastAPI application."""
 from datetime import datetime, timezone
 from fastapi import FastAPI, File, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+import asyncio
 import json
 import re
 import shutil
+import time
 import uuid
 
 from .models import ChatRequest, ChatResponse
@@ -61,18 +65,64 @@ def _slugify(value: str | None, fallback: str = "uploaded_scenario") -> str:
     return slug or fallback
 
 
-def _read_upload_as_context(file: UploadFile) -> dict:
-    """Parse an upload through a temporary file and remove it immediately."""
-    safe_name = Path(file.filename or "scenario").name
+def _parse_upload_bytes(data: bytes, filename: str) -> dict:
+    """Parse uploaded bytes through a temporary file and remove it immediately.
+
+    Takes bytes rather than the UploadFile because the request (and its file
+    handle) is gone by the time the background job runs.
+    """
+    safe_name = Path(filename or "scenario").name
     tmp_dir = Path(__file__).parent / f"simexai_upload_{uuid.uuid4().hex}"
     tmp_dir.mkdir(parents=True, exist_ok=False)
     try:
         file_path = tmp_dir / safe_name
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        file_path.write_bytes(data)
         return parse_document(file_path)
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# ── Upload job tracking ─────────────────────────────────────
+# In-memory and process-local: a restart loses in-flight jobs, and this does
+# not survive multiple workers. Adequate while the app is single-process
+# (see review P0-5); revisit alongside the session work.
+
+_upload_jobs: dict[str, dict] = {}
+_UPLOAD_JOB_TTL_SECONDS = 900
+
+
+def _create_upload_job(filename: str) -> str:
+    _prune_upload_jobs()
+    job_id = uuid.uuid4().hex
+    _upload_jobs[job_id] = {
+        "job_id": job_id,
+        "filename": filename,
+        "stage": "queued",
+        "message": "Preparing upload",
+        "current": 0,
+        "total": 0,
+        "page_count": 0,
+        "done": False,
+        "error": None,
+        "result": None,
+        "started_at": time.time(),
+        "updated_at": time.time(),
+    }
+    return job_id
+
+
+def _update_upload_job(job_id: str, **fields) -> None:
+    job = _upload_jobs.get(job_id)
+    if job is None:
+        return
+    job.update(fields)
+    job["updated_at"] = time.time()
+
+
+def _prune_upload_jobs() -> None:
+    cutoff = time.time() - _UPLOAD_JOB_TTL_SECONDS
+    for stale in [k for k, v in _upload_jobs.items() if v["updated_at"] < cutoff]:
+        _upload_jobs.pop(stale, None)
 
 
 def _clean_llm_json(raw: str) -> str:
@@ -211,6 +261,30 @@ def _build_upload_user_content(parsed_data: dict) -> list[dict]:
 
 @app.post("/api/scenario/upload")
 async def upload_scenario(file: UploadFile = File(...)):
+    """Accept a scenario document and start extracting it in the background.
+
+    Returns a job id immediately; poll /api/scenario/upload/{job_id} for
+    progress. Extraction runs N sequential LLM calls over the document and
+    routinely takes minutes, so holding the request open gives the client
+    nothing to show.
+    """
+    filename = Path(file.filename or "scenario").name
+    file_bytes = await file.read()
+    job_id = _create_upload_job(filename)
+    asyncio.create_task(_run_upload_job(job_id, file_bytes, filename))
+    return JSONResponse(status_code=202, content={"job_id": job_id, "filename": filename})
+
+
+@app.get("/api/scenario/upload/{job_id}")
+def get_upload_progress(job_id: str):
+    """Report progress for an upload job."""
+    job = _upload_jobs.get(job_id)
+    if job is None:
+        return JSONResponse(status_code=404, content={"message": "Unknown or expired upload job."})
+    return {**job, "elapsed_seconds": round(time.time() - job["started_at"], 1)}
+
+
+async def _run_upload_job(job_id: str, file_bytes: bytes, filename: str):
     """Use an uploaded file as LLM context and persist generated JSON only."""
     from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -260,12 +334,27 @@ Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Ever
     raw_output = "No raw output generated"
 
     try:
-        parsed_data = _read_upload_as_context(file)
+        _update_upload_job(
+            job_id, stage="parsing",
+            message=f"Reading {filename}",
+        )
+        # Rasterizing pages and Word COM conversion are blocking CPU/IO work.
+        # Running them off the event loop keeps the server responsive — both
+        # for progress polling and for everyone else's chat (review P1-2).
+        parsed_data = await run_in_threadpool(_parse_upload_bytes, file_bytes, filename)
         extracted_text = parsed_data.get("text", "")
         vision_images = parsed_data.get("vision_images") or []
         image_count = parsed_data.get("image_count", 0)
         visual_page_count = parsed_data.get("visual_page_count", 0)
         visual_mode = parsed_data.get("visual_mode", "none")
+
+        _update_upload_job(
+            job_id, stage="rendering", page_count=visual_page_count,
+            message=(
+                f"Rendered {visual_page_count} page{'s' if visual_page_count != 1 else ''}"
+                if visual_page_count else "Extracted document text"
+            ),
+        )
 
         # Chunk the data to prevent payload/OOM crashes
         TEXT_CHUNK_SIZE = 15000
@@ -293,6 +382,10 @@ Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Ever
         scenario_data = {}
 
         for i in range(num_chunks):
+            _update_upload_job(
+                job_id, stage="analysing", current=i + 1, total=num_chunks,
+                message=f"Analysing section {i + 1} of {num_chunks}",
+            )
             chunk_parsed_data = {
                 "text": text_chunks[i],
                 "image_count": image_count if i == 0 else 0, # only count total images in first chunk to avoid prompt confusion
@@ -322,10 +415,12 @@ Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Ever
             except Exception as exc:
                 print(f"Warning: Chunk {i+1}/{num_chunks} failed: {exc}")
                 if i == 0 and num_chunks == 1:
-                    return {
-                        "message": f"Failed to process upload: {responder.format_llm_error(exc)}",
-                        "phases": scenario.get_all_phases(),
-                    }
+                    _update_upload_job(
+                        job_id, stage="error", done=True,
+                        error=responder.format_llm_error(exc),
+                        message="Extraction failed",
+                    )
+                    return
 
         if not scenario_data:
             scenario_data = {
@@ -333,13 +428,13 @@ Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Ever
                 "location": "Unknown", "impact": "Unknown", "context": "Failed to extract complete scenario data"
             }
 
-        scenario_id = _scenario_id_for_upload(scenario_data, file.filename)
+        scenario_id = _scenario_id_for_upload(scenario_data, filename)
         injects_id = f"{scenario_id}_injects"
         injects_list = _normalize_injects(all_injects, scenario_id)
 
         scenario_data["id"] = scenario_id
         scenario_data["is_uploaded"] = True
-        scenario_data["source_file"] = Path(file.filename or "scenario").name
+        scenario_data["source_file"] = filename
         scenario_data["source_image_count"] = image_count
         scenario_data["source_visual_page_count"] = visual_page_count
         scenario_data["source_visual_mode"] = visual_mode
@@ -348,25 +443,35 @@ Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Ever
         save_injects(scenario_id, injects_list)
             
         if vector_store:
+            _update_upload_job(
+                job_id, stage="indexing", message="Indexing for retrieval",
+            )
             try:
-                vector_store.delete_scenario(scenario_id)
-                vector_store.index_scenario(scenario_id, scenario_data)
-                vector_store.index_injects(scenario_id, injects_list)
+                await run_in_threadpool(vector_store.delete_scenario, scenario_id)
+                await run_in_threadpool(vector_store.index_scenario, scenario_id, scenario_data)
+                await run_in_threadpool(vector_store.index_injects, scenario_id, injects_list)
             except Exception as e:
                 print(f"Warning: Could not index uploaded scenario: {e}")
-    
+
         scenario.load_scenario(scenario_id, injects_id)
-        return {
-            "message": "Scenario uploaded and extracted successfully.",
-            "scenario": scenario.get_scenario_info(),
-            "phases": scenario.get_all_phases(),
-            "injects": scenario.get_current_injects(),
-        }
+        _update_upload_job(
+            job_id, stage="done", done=True, message="Scenario ready",
+            result={
+                "message": "Scenario uploaded and extracted successfully.",
+                "scenario": scenario.get_scenario_info(),
+                "phases": scenario.get_all_phases(),
+                "injects": scenario.get_current_injects(),
+                "inject_count": len(injects_list),
+            },
+        )
     except Exception as e:
         import traceback
         traceback.print_exc()
         print("Raw Output:", raw_output)
-        return {"message": f"Failed to process upload: {str(e)}", "phases": scenario.get_all_phases()}
+        _update_upload_job(
+            job_id, stage="error", done=True, error=str(e),
+            message="Upload failed",
+        )
 
 
 @app.get("/api/scenario")

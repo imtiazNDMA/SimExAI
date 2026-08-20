@@ -9,6 +9,7 @@ call. Adapted for the current architecture: SQLite persistence (commit
 """
 import shutil
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -114,8 +115,21 @@ class UploadVisionEndpointTests(unittest.TestCase):
                             "/api/scenario/upload",
                             files={"file": (upload_path.name, handle)},
                         )
-                    self.assertEqual(response.status_code, 200)
-                    self.assertIn("successfully", response.json()["message"])
+                    # Extraction runs in the background; the POST only hands
+                    # back a job id.
+                    self.assertEqual(response.status_code, 202)
+                    job_id = response.json()["job_id"]
+
+                    deadline = time.time() + 30
+                    while time.time() < deadline:
+                        job = client.get(f"/api/scenario/upload/{job_id}").json()
+                        if job["done"]:
+                            break
+                        time.sleep(0.05)
+
+                    self.assertTrue(job["done"], "upload job did not finish in time")
+                    self.assertIsNone(job["error"])
+                    self.assertIn("successfully", job["result"]["message"])
 
         # Each upload is a single page, so each LLM call carries exactly one image.
         self.assertEqual(self.fake_llm.image_counts, [1, 1])

@@ -1101,29 +1101,175 @@ init();
 
 
 btnUploadScenario.addEventListener('click', () => { fileInputScenario.click(); });
-fileInputScenario.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    btnUploadScenario.innerHTML = '⏳ Wait... ';
-    btnUploadScenario.disabled = true;
+
+// ── Scenario ingestion ─────────────────────────
+// Extraction runs N sequential LLM calls over the document, so it routinely
+// takes minutes. The server returns a job id immediately and we poll it.
+
+const ulOverlay  = $('#upload-overlay');
+const ulStages   = $('#ul-stages');
+const ulMessage  = $('#ul-message');
+const ulFilename = $('#ul-filename');
+const ulPages    = $('#ul-pages');
+const ulKind     = $('#ul-kind');
+const ulElapsed  = $('#ul-elapsed');
+const ulDismiss  = $('#ul-dismiss');
+const ulHint     = $('#ul-hint');
+const ulTitle    = $('#ul-title');
+const ulRingFill = document.querySelector('#upload-overlay .ring-fill');
+
+const UL_ORDER = ['parsing', 'rendering', 'analysing', 'indexing'];
+const UL_CIRCUMFERENCE = 377;
+let ulTimer = null;
+let ulStart = 0;
+
+function ulSetRing(fraction) {
+  if (!ulRingFill) return;
+  const clamped = Math.max(0, Math.min(1, fraction));
+  ulRingFill.style.strokeDashoffset = String(UL_CIRCUMFERENCE * (1 - clamped));
+}
+
+// Stage weights reflect where the time actually goes: analysis dominates.
+function ulFraction(stage, current, total) {
+  switch (stage) {
+    case 'queued':    return 0;
+    case 'parsing':   return 0.04;
+    case 'rendering': return 0.12;
+    case 'analysing': return total > 0 ? 0.15 + (current / total) * 0.72 : 0.15;
+    case 'indexing':  return 0.92;
+    case 'done':      return 1;
+    default:          return 0;
+  }
+}
+
+function ulRenderStages(stage) {
+  const activeIdx = UL_ORDER.indexOf(stage);
+  [...ulStages.children].forEach((li, i) => {
+    if (stage === 'done') li.dataset.state = 'done';
+    else if (activeIdx === -1) li.removeAttribute('data-state');
+    else if (i < activeIdx) li.dataset.state = 'done';
+    else if (i === activeIdx) li.dataset.state = 'active';
+    else li.removeAttribute('data-state');
+  });
+}
+
+function ulTick() {
+  const secs = Math.floor((Date.now() - ulStart) / 1000);
+  ulElapsed.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}
+
+function ulOpen(file) {
+  const ext = (file.name.split('.').pop() || '').toUpperCase();
+  ulKind.textContent = ext.slice(0, 4) || 'FILE';
+  ulFilename.textContent = file.name;
+  ulPages.textContent = '';
+  ulTitle.textContent = 'Ingesting scenario';
+  ulMessage.textContent = 'Uploading document';
+  ulHint.hidden = false;
+  ulDismiss.hidden = true;
+  ulOverlay.dataset.active = 'true';
+  ulOverlay.dataset.indeterminate = 'true';
+  delete ulOverlay.dataset.state;
+  ulRenderStages('parsing');
+  ulSetRing(0);
+  ulOverlay.hidden = false;
+  ulStart = Date.now();
+  ulTick();
+  ulTimer = setInterval(ulTick, 1000);
+}
+
+function ulFinish({ state, title, message, showReload }) {
+  clearInterval(ulTimer);
+  ulOverlay.dataset.state = state;
+  ulOverlay.dataset.active = 'false';
+  ulOverlay.dataset.indeterminate = 'false';
+  ulTitle.textContent = title;
+  ulMessage.textContent = message;
+  ulHint.hidden = true;
+  ulDismiss.hidden = false;
+  ulDismiss.textContent = showReload ? 'Start exercise' : 'Close';
+  ulSetRing(state === 'done' ? 1 : 0.999);
+  if (state === 'done') ulRenderStages('done');
+  // Nothing is in progress any more — don't leave a stage looking active.
+  else [...ulStages.children].forEach(li => li.removeAttribute('data-state'));
+  ulDismiss.onclick = () => {
+    ulOverlay.hidden = true;
+    if (showReload) window.location.reload();
+  };
+  ulDismiss.focus();
+}
+
+async function ulPoll(jobId) {
+  while (true) {
+    await new Promise(r => setTimeout(r, 1200));
+    let job;
     try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetch('/api/scenario/upload', { method: 'POST', body: formData });
-        const data = await response.json();
-        
-        if (!response.ok || data.message.includes("Failed")) {
-            alert('Error: ' + data.message);
-        } else {
-            alert('Scenario Uploaded & Ingested! ' + data.message);
-            window.location.reload();
-        }
+      const res = await fetch(`/api/scenario/upload/${jobId}`);
+      if (res.status === 404) {
+        ulFinish({ state: 'error', title: 'Upload lost',
+          message: 'The server restarted before extraction finished. Upload the document again.' });
+        return;
+      }
+      job = await res.json();
     } catch (err) {
-        console.error(err);
-        alert('Failed to upload scenario');
-    } finally {
-        btnUploadScenario.innerHTML = 'Upload Scenario';
-        btnUploadScenario.disabled = false;
-        e.target.value = '';
+      continue; // transient network blip — keep polling
     }
+
+    if (job.stage === 'analysing' && job.total > 0) ulOverlay.dataset.indeterminate = 'false';
+    if (job.page_count) {
+      ulPages.textContent = `${job.page_count} page${job.page_count === 1 ? '' : 's'}`;
+    }
+    ulMessage.textContent = job.message || '';
+    ulRenderStages(job.stage);
+    ulSetRing(ulFraction(job.stage, job.current, job.total));
+
+    if (job.done) {
+      if (job.error) {
+        ulFinish({ state: 'error', title: 'Extraction failed', message: job.error });
+      } else {
+        const n = job.result?.inject_count ?? 0;
+        ulFinish({
+          state: 'done', title: 'Scenario ready', showReload: true,
+          message: `Extracted ${n} inject${n === 1 ? '' : 's'} from ${job.filename}.`,
+        });
+      }
+      return;
+    }
+  }
+}
+
+fileInputScenario.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+
+  if (/\.doc$/i.test(file.name)) {
+    ulOpen(file);
+    ulFinish({
+      state: 'error', title: 'Save as .docx first',
+      message: 'Legacy .doc files cannot be read. Open it in Word, choose File > Save As, pick Word Document (.docx), then upload again.',
+    });
+    return;
+  }
+
+  ulOpen(file);
+  btnUploadScenario.disabled = true;
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/scenario/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok || !data.job_id) {
+      ulFinish({ state: 'error', title: 'Upload rejected',
+        message: data.message || 'The server would not accept this document.' });
+      return;
+    }
+    await ulPoll(data.job_id);
+  } catch (err) {
+    console.error(err);
+    ulFinish({ state: 'error', title: 'Upload failed',
+      message: 'Could not reach the server. Check that it is running, then try again.' });
+  } finally {
+    btnUploadScenario.disabled = false;
+  }
 });

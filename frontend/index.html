@@ -49,7 +49,7 @@
       </div>
 
       <div class="header-right">
-        <input id="scenario-file-input" type="file" accept=".pdf,.docx,.txt" hidden>
+        <input id="scenario-file-input" type="file" accept=".pdf,.docx,.doc,.txt" hidden>
         <button id="btn-upload-scenario" class="ctrl-btn" title="Upload Scenario">
           Upload Scenario
         </button>
@@ -203,6 +203,50 @@
   </div>
 
 </div>
+
+<!-- Scenario ingestion progress -->
+<div id="upload-overlay" class="upload-overlay" role="dialog" aria-modal="true"
+     aria-labelledby="ul-title" aria-describedby="ul-message" hidden>
+  <div class="upload-card">
+
+    <!-- Signature: the pages light up as the model actually reads them -->
+    <div class="upload-visual">
+      <svg class="upload-ring" viewBox="0 0 132 132" aria-hidden="true">
+        <circle class="ring-track" cx="66" cy="66" r="60" />
+        <circle class="ring-fill" cx="66" cy="66" r="60" />
+      </svg>
+      <div class="upload-doc" aria-hidden="true">
+        <span class="doc-page"></span>
+        <span class="doc-page"></span>
+        <span class="doc-page"></span>
+        <span class="doc-scan"></span>
+        <span class="doc-kind" id="ul-kind">PDF</span>
+      </div>
+    </div>
+
+    <h2 class="upload-title" id="ul-title">Ingesting scenario</h2>
+    <p class="upload-file"><span id="ul-filename">document</span><span id="ul-pages"></span></p>
+
+    <p class="upload-message" id="ul-message" role="status" aria-live="polite">Preparing upload</p>
+
+    <ul class="upload-stages" id="ul-stages">
+      <li data-stage="parsing"><i></i>Reading document</li>
+      <li data-stage="rendering"><i></i>Rendering pages</li>
+      <li data-stage="analysing"><i></i>Analysing content</li>
+      <li data-stage="indexing"><i></i>Indexing for retrieval</li>
+    </ul>
+
+    <p class="upload-hint" id="ul-hint">
+      Keep this tab open. Long documents are read section by section and can take several minutes.
+    </p>
+
+    <div class="upload-foot">
+      <span class="upload-elapsed" id="ul-elapsed">0:00</span>
+      <button class="upload-btn" id="ul-dismiss" hidden>Close</button>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>

@@ -137,6 +137,13 @@ def _convert_docx_to_pdf_with_word(docx_path: Path, pdf_path: Path) -> None:
 
 
 def _render_docx_pages(docx_path: Path) -> list[dict]:
+    """Render DOCX pages as images via Word, or return [] if Word is unavailable.
+
+    Page rendering needs Microsoft Word (COM, Windows only). When it isn't
+    there, degrade to text-only extraction rather than failing the whole
+    upload — the extracted text is still perfectly usable, it just loses
+    maps, charts, and scanned content.
+    """
     tmp_dir = docx_path.parent / f"simexai_docx_render_{uuid.uuid4().hex}"
     tmp_dir.mkdir(parents=True, exist_ok=False)
     try:
@@ -145,6 +152,9 @@ def _render_docx_pages(docx_path: Path) -> list[dict]:
         if not pdf_path.exists():
             raise RuntimeError("Microsoft Word did not create a PDF for DOCX vision rendering.")
         return _render_pdf_pages(pdf_path, "DOCX")
+    except RuntimeError as exc:
+        print(f"DOCX page rendering unavailable, continuing with text only: {exc}")
+        return []
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -175,5 +185,13 @@ def parse_document(file_path: Path) -> dict:
     elif ext == ".txt":
         text = file_path.read_text(encoding="utf-8", errors="replace")
         return _result(text, 0, [])
+    elif ext == ".doc":
+        raise ValueError(
+            "Legacy .doc files are not supported. Open the file in Word and use "
+            "File > Save As to save it as .docx, then upload again."
+        )
     else:
-        raise ValueError(f"Unsupported upload type: {ext or 'unknown'}")
+        raise ValueError(
+            f"Unsupported upload type: {ext or 'unknown'}. "
+            "Upload a PDF (.pdf), a Word document (.docx), or plain text (.txt)."
+        )

@@ -38,6 +38,9 @@ a { color: inherit; text-decoration: none; }
   --topbar-bg:   rgba(8, 10, 30, 0.6);
   --dock-bg:     rgba(6, 8, 23, 0.7);
   --drawer-bg:   rgba(8, 10, 30, 0.96);
+  --upload-scrim: rgba(6, 8, 23, 0.82);
+  --upload-track: rgba(255, 255, 255, 0.07);
+  --upload-idle:  rgba(255, 255, 255, 0.13);
   --overlay-bg:  rgba(6, 8, 23, 0.65);
   --scroll-thumb: rgba(255,255,255,0.1);
   --scroll-thumb-hover: rgba(255,255,255,0.18);
@@ -105,6 +108,9 @@ html[data-theme="light"] {
   --topbar-bg:   rgba(255, 255, 255, 0.72);
   --dock-bg:     rgba(255, 255, 255, 0.78);
   --drawer-bg:   rgba(255, 255, 255, 0.97);
+  --upload-scrim: rgba(15, 23, 42, 0.45);
+  --upload-track: rgba(15, 23, 42, 0.09);
+  --upload-idle:  rgba(15, 23, 42, 0.14);
   --overlay-bg:  rgba(15, 23, 42, 0.3);
   --scroll-thumb: rgba(15, 23, 42, 0.16);
   --scroll-thumb-hover: rgba(15, 23, 42, 0.26);
@@ -1485,4 +1491,266 @@ html[data-theme="light"] .inject-severity-tag.low      { color: #047857; }
 /* Large screens */
 @media (min-width: 1400px) {
   :root { --sidebar-w: 290px; }
+}
+
+/* ═══════════════════════════════════════════════
+   Scenario ingestion overlay
+   ═══════════════════════════════════════════════ */
+
+.upload-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--upload-scrim);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: ul-fade 220ms ease both;
+}
+.upload-overlay[hidden] { display: none; }
+
+@keyframes ul-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.upload-card {
+  width: min(460px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 34px 32px 26px;
+  text-align: center;
+  border: 1px solid var(--border-2);
+  border-radius: 22px;
+  background: var(--drawer-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(139, 92, 246, 0.08);
+  animation: ul-rise 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ul-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Signature visual ── */
+.upload-visual {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 22px;
+}
+
+.upload-ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+.upload-ring circle { fill: none; stroke-width: 3; stroke-linecap: round; }
+.ring-track { stroke: var(--upload-track); }
+.ring-fill {
+  stroke: var(--purple);
+  stroke-dasharray: 377;
+  stroke-dashoffset: 377;
+  filter: drop-shadow(0 0 6px var(--purple-glow));
+  transition: stroke-dashoffset 600ms cubic-bezier(0.16, 1, 0.3, 1), stroke 400ms ease;
+}
+/* Before real chunk counts arrive there is nothing honest to show, so the
+   ring sweeps instead of claiming a percentage. */
+.upload-overlay[data-indeterminate="true"] .ring-fill {
+  stroke-dasharray: 90 287;
+  stroke-dashoffset: 0;
+  animation: ul-sweep 1.4s linear infinite;
+}
+@keyframes ul-sweep { to { transform: rotate(360deg); } }
+.upload-ring .ring-fill { transform-origin: 66px 66px; }
+
+.upload-doc {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 5px;
+}
+
+.doc-page {
+  display: block;
+  width: 46px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--upload-idle);
+  transition: background 400ms ease, box-shadow 400ms ease;
+}
+.doc-page:nth-child(2) { width: 38px; }
+.doc-page:nth-child(3) { width: 42px; }
+.upload-overlay[data-active="true"] .doc-page {
+  background: var(--purple);
+  box-shadow: 0 0 10px var(--purple-glow);
+  animation: ul-read 1.8s ease-in-out infinite;
+}
+.upload-overlay[data-active="true"] .doc-page:nth-child(2) { animation-delay: 0.22s; }
+.upload-overlay[data-active="true"] .doc-page:nth-child(3) { animation-delay: 0.44s; }
+@keyframes ul-read {
+  0%, 100% { opacity: 0.28; }
+  40%      { opacity: 1; }
+}
+
+.doc-scan {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58px;
+  height: 1px;
+  margin-left: -29px;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+  opacity: 0;
+}
+.upload-overlay[data-active="true"] .doc-scan {
+  opacity: 1;
+  animation: ul-scanline 2.2s ease-in-out infinite;
+}
+@keyframes ul-scanline {
+  0%, 100% { transform: translateY(-16px); opacity: 0; }
+  50%      { transform: translateY(14px);  opacity: 0.9; }
+}
+
+.doc-kind {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  font-family: var(--font-display, inherit);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text-3);
+}
+
+/* ── Copy ── */
+.upload-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.upload-file {
+  margin: 0 0 18px;
+  font-size: 12.5px;
+  color: var(--text-3);
+  word-break: break-word;
+}
+.upload-file span + span:not(:empty)::before { content: " · "; }
+
+.upload-message {
+  margin: 0 0 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-2);
+  min-height: 20px;
+}
+
+/* ── Stage checklist ── */
+.upload-stages {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 16px 0 4px;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+.upload-stages li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-3);
+  transition: color 300ms ease;
+}
+.upload-stages li i {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-2);
+  position: relative;
+  transition: all 300ms ease;
+}
+.upload-stages li[data-state="active"] { color: var(--text); font-weight: 500; }
+.upload-stages li[data-state="active"] i {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--purple-glow);
+  animation: ul-pulse 1.5s ease-in-out infinite;
+}
+@keyframes ul-pulse { 50% { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.05); } }
+.upload-stages li[data-state="done"] { color: var(--text-2); }
+.upload-stages li[data-state="done"] i {
+  border-color: var(--green);
+  background: var(--green);
+}
+.upload-stages li[data-state="done"] i::after {
+  content: "";
+  position: absolute;
+  left: 4px; top: 1px;
+  width: 4px; height: 8px;
+  border: solid var(--text-inv);
+  border-width: 0 1.6px 1.6px 0;
+  transform: rotate(45deg);
+}
+
+.upload-hint {
+  margin: 0 0 18px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-3);
+}
+
+.upload-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.upload-elapsed {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.upload-btn {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  transition: background 200ms ease, border-color 200ms ease;
+}
+.upload-btn:hover { background: var(--surface-active); border-color: var(--border-glow); }
+.upload-btn:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+
+/* ── Terminal states ── */
+.upload-overlay[data-state="done"]  .ring-fill { stroke: var(--green); }
+.upload-overlay[data-state="error"] .ring-fill { stroke: var(--red); }
+.upload-overlay[data-state="error"] .upload-message { color: var(--red); }
+.upload-overlay[data-state="done"]  .doc-page { background: var(--green); box-shadow: none; }
+.upload-overlay[data-state="error"] .doc-page { background: var(--red); box-shadow: none; }
+
+@media (max-width: 480px) {
+  .upload-card { padding: 26px 20px 20px; border-radius: 18px; }
+  .upload-visual { width: 108px; height: 108px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upload-overlay,
+  .upload-card,
+  .upload-overlay[data-active="true"] .doc-page,
+  .upload-overlay[data-active="true"] .doc-scan,
+  .upload-overlay[data-indeterminate="true"] .ring-fill,
+  .upload-stages li[data-state="active"] i { animation: none; }
+  .ring-fill { transition: none; }
+  .upload-overlay[data-active="true"] .doc-scan { opacity: 0.5; }
 }
