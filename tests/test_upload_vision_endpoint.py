@@ -120,14 +120,11 @@ class UploadVisionEndpointTests(unittest.TestCase):
         # Each upload is a single page, so each LLM call carries exactly one image.
         self.assertEqual(self.fake_llm.image_counts, [1, 1])
 
-        conn = database.get_connection()
-        try:
+        with database.get_connection() as conn:
             scenarios = conn.execute(
                 "SELECT id, source_visual_page_count, source_visual_mode FROM scenarios"
             ).fetchall()
             inject_count = conn.execute("SELECT COUNT(*) FROM injects").fetchone()[0]
-        finally:
-            conn.close()
 
         self.assertEqual(len(scenarios), 2, "one scenario row per upload")
         for row in scenarios:

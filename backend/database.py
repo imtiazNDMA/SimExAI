@@ -1,16 +1,39 @@
 import sqlite3
 import json
+import uuid
+from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 DB_PATH = DATA_DIR / "simex.db"
 
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+@contextmanager
 def get_connection():
-    """Get a database connection configured to return dict-like rows."""
+    """Yield a connection that commits on success, rolls back on error, and always closes.
+
+    sqlite3's own `with conn:` block commits but never closes, which leaked a
+    file handle on every call and kept the database file locked on Windows
+    (review P2-3). Foreign keys are enabled per-connection — SQLite defaults
+    them OFF, which made the ON DELETE CASCADE on `injects` inert.
+    """
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    return conn
+    conn.execute("PRAGMA foreign_keys = ON")
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 def init_db():
     """Create tables if they don't exist."""
@@ -44,9 +67,247 @@ def init_db():
                 severity TEXT,
                 target_wings TEXT,
                 response_required BOOLEAN,
+                status TEXT DEFAULT 'pending',
                 FOREIGN KEY(scenario_id) REFERENCES scenarios(id) ON DELETE CASCADE
             )
         """)
+
+        # ── Exercise runs and participant sessions ──────────────────
+        # An exercise is one run of a scenario. The phase lives here, not on
+        # the session: a SimEx is a shared timeline — every wing sits at D-90
+        # together and only the Controller advances it.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS exercises (
+                id TEXT PRIMARY KEY,
+                scenario_id TEXT,
+                injects_id TEXT,
+                current_phase_index INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'active',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(scenario_id) REFERENCES scenarios(id) ON DELETE SET NULL
+            )
+        """)
+
+        # One participant taking part in an exercise, as a given wing.
+        # The first session on an exercise claims role='controller'.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                exercise_id TEXT NOT NULL,
+                wing_id TEXT,
+                participant_label TEXT,
+                role TEXT NOT NULL DEFAULT 'participant',
+                status TEXT NOT NULL DEFAULT 'active',
+                created_at TEXT NOT NULL,
+                last_seen_at TEXT NOT NULL,
+                FOREIGN KEY(exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
+            )
+        """)
+
+        # Full transcript. Without this the moderator has no memory (P0-1)
+        # and no exercise can be scored after the fact (P0-2).
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                phase_id TEXT,
+                created_at TEXT NOT NULL,
+                token_count INTEGER,
+                FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+            )
+        """)
+
+        # Per-session inject lifecycle: delivered -> addressed.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS inject_state (
+                session_id TEXT NOT NULL,
+                inject_id TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                delivered_at TEXT,
+                addressed_at TEXT,
+                PRIMARY KEY (session_id, inject_id),
+                FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+            )
+        """)
+
+        # Structured grading, one row per assessed response.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS assessments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                inject_id TEXT,
+                message_id INTEGER,
+                scores TEXT,
+                evidence TEXT,
+                gaps TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+            )
+        """)
+
+        for statement in (
+            "CREATE INDEX IF NOT EXISTS idx_injects_scenario ON injects(scenario_id, phase_id)",
+            "CREATE INDEX IF NOT EXISTS idx_sessions_exercise ON sessions(exercise_id)",
+            "CREATE INDEX IF NOT EXISTS idx_messages_session  ON messages(session_id, id)",
+            "CREATE INDEX IF NOT EXISTS idx_assessments_session ON assessments(session_id)",
+        ):
+            conn.execute(statement)
+
+    _migrate()
+
+def _migrate():
+    """Bring an existing database up to the current schema.
+
+    Additive only — no data is dropped or rewritten. Databases created before
+    the sessions work predate `injects.status`, which `_normalize_injects` has
+    always set and the schema silently discarded.
+    """
+    with get_connection() as conn:
+        # WAL survives in the file; it lets reads proceed during a write, which
+        # matters because FastAPI runs sync routes on a threadpool.
+        conn.execute("PRAGMA journal_mode = WAL")
+
+        existing = {row["name"] for row in conn.execute("PRAGMA table_info(injects)")}
+        if existing and "status" not in existing:
+            conn.execute("ALTER TABLE injects ADD COLUMN status TEXT DEFAULT 'pending'")
+
+
+# ── Exercises ───────────────────────────────────────────────
+
+
+def create_exercise(scenario_id: Optional[str] = None, injects_id: Optional[str] = None) -> str:
+    exercise_id = uuid.uuid4().hex
+    now = _now()
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO exercises (id, scenario_id, injects_id, current_phase_index,"
+            " status, created_at, updated_at) VALUES (?, ?, ?, 0, 'active', ?, ?)",
+            (exercise_id, scenario_id, injects_id, now, now),
+        )
+    return exercise_id
+
+
+def load_exercise(exercise_id: str) -> Dict[str, Any]:
+    if not exercise_id:
+        return {}
+    with get_connection() as conn:
+        row = conn.execute("SELECT * FROM exercises WHERE id = ?", (exercise_id,)).fetchone()
+    return dict(row) if row else {}
+
+
+def update_exercise(exercise_id: str, **fields) -> None:
+    """Update whitelisted exercise columns. Unknown keys are ignored."""
+    allowed = {"scenario_id", "injects_id", "current_phase_index", "status"}
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return
+    assignments = ", ".join(f"{k} = ?" for k in updates)
+    with get_connection() as conn:
+        conn.execute(
+            f"UPDATE exercises SET {assignments}, updated_at = ? WHERE id = ?",
+            (*updates.values(), _now(), exercise_id),
+        )
+
+
+def get_or_create_active_exercise() -> Dict[str, Any]:
+    """Return the most recent active exercise, creating one if none exists."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM exercises WHERE status = 'active' ORDER BY created_at DESC LIMIT 1"
+        ).fetchone()
+    if row:
+        return dict(row)
+    return load_exercise(create_exercise())
+
+
+# ── Sessions ────────────────────────────────────────────────
+
+
+def create_session(
+    exercise_id: str,
+    wing_id: Optional[str] = None,
+    participant_label: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Create a participant session. The first session on an exercise controls it."""
+    session_id = uuid.uuid4().hex
+    now = _now()
+    with get_connection() as conn:
+        existing = conn.execute(
+            "SELECT COUNT(*) FROM sessions WHERE exercise_id = ?", (exercise_id,)
+        ).fetchone()[0]
+        role = "controller" if existing == 0 else "participant"
+        conn.execute(
+            "INSERT INTO sessions (id, exercise_id, wing_id, participant_label, role,"
+            " status, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?, 'active', ?, ?)",
+            (session_id, exercise_id, wing_id, participant_label, role, now, now),
+        )
+    return load_session(session_id)
+
+
+def load_session(session_id: str) -> Dict[str, Any]:
+    if not session_id:
+        return {}
+    with get_connection() as conn:
+        row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    return dict(row) if row else {}
+
+
+def touch_session(session_id: str, wing_id: Optional[str] = None) -> None:
+    with get_connection() as conn:
+        if wing_id:
+            conn.execute(
+                "UPDATE sessions SET last_seen_at = ?, wing_id = ? WHERE id = ?",
+                (_now(), wing_id, session_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE sessions SET last_seen_at = ? WHERE id = ?", (_now(), session_id)
+            )
+
+
+# ── Transcript ──────────────────────────────────────────────
+
+
+def save_message(
+    session_id: str,
+    role: str,
+    content: str,
+    phase_id: Optional[str] = None,
+    token_count: Optional[int] = None,
+) -> int:
+    with get_connection() as conn:
+        cur = conn.execute(
+            "INSERT INTO messages (session_id, role, content, phase_id, created_at, token_count)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (session_id, role, content, phase_id, _now(), token_count),
+        )
+        return cur.lastrowid
+
+
+def load_messages(session_id: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Return a session's transcript oldest-first.
+
+    `limit` keeps the most recent N turns while preserving chronological order,
+    which is what prompt construction needs.
+    """
+    if not session_id:
+        return []
+    with get_connection() as conn:
+        if limit:
+            rows = conn.execute(
+                "SELECT * FROM (SELECT * FROM messages WHERE session_id = ?"
+                " ORDER BY id DESC LIMIT ?) ORDER BY id ASC",
+                (session_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM messages WHERE session_id = ? ORDER BY id ASC", (session_id,)
+            ).fetchall()
+    return [dict(row) for row in rows]
+
 
 def save_scenario(scenario_data: Dict[str, Any]):
     """Insert or replace scenario data into the scenarios table."""
@@ -90,8 +351,8 @@ def save_injects(scenario_id: str, injects: List[Dict[str, Any]]):
             conn.execute("""
                 INSERT INTO injects (
                     id, scenario_id, phase_id, time_offset, title, description,
-                    severity, target_wings, response_required
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    severity, target_wings, response_required, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 inj_id,
                 scenario_id,
@@ -101,7 +362,8 @@ def save_injects(scenario_id: str, injects: List[Dict[str, Any]]):
                 inj.get("description"),
                 inj.get("severity"),
                 json.dumps(inj.get("target_wings", inj.get("required_wings", []))),
-                bool(inj.get("response_required", False))
+                bool(inj.get("response_required", False)),
+                inj.get("status") or "pending",
             ))
 
 def load_scenario(scenario_id: str) -> Dict[str, Any]:
