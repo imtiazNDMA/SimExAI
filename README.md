@@ -22,7 +22,7 @@ Participants then select their NDMA Wing and chat with the AI. The AI evaluates 
 ```
 backend/
 ├── app.py               # FastAPI server, API routes, Upload Pipeline
-├── ollama_engine.py     # Langchain ChatOllama integration & Invigilator prompt
+├── llm_engine.py        # LangChain ChatOpenAI -> LM Studio & Invigilator prompt
 ├── document_parser.py   # PDF/DOCX text and Vision extraction
 ├── database.py          # SQLite database connection & CRUD operations
 └── pinecone_engine.py   # Pure Pinecone Vector Search integration
@@ -46,9 +46,31 @@ D-90 → D-30 → D-Day → D+30 → D+90
 - `uv` package manager
 - Copy `.env.example` to `.env` and configure your API keys and settings:
   - Pinecone API Key (`PINECONE_API_KEY`)
-  - Ollama running locally (Default: `http://localhost:11434` with model `qwen3.6:35b`)
+  - LM Studio running locally with an OpenAI-compatible server
+    (Default: `http://localhost:1234/v1`, model `google/gemma-4-26b-a4b`).
+    Start it from LM Studio's Developer / Local Server tab and load the model.
 
 ### Installation & Run
+
+**One command (Windows):**
+
+```bat
+start.bat
+```
+
+This checks prerequisites, creates `.env` from `.env.example` if missing, runs `uv sync`,
+verifies the configured LLM server is reachable, starts the backend, and opens
+http://localhost:8000 once it responds.
+
+Options (passed through to `start.ps1`):
+
+| Flag | Effect |
+| --- | --- |
+| `-Port 8080` | Run on a different port (default 8000) |
+| `-NoSync` | Skip `uv sync` for fast restarts |
+| `-NoBrowser` | Don't open the browser |
+
+**Manual:**
 
 ```bash
 # Install dependencies
