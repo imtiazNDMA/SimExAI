@@ -64,22 +64,27 @@ The active scenario is not an env var — it is whatever was last uploaded, trac
 ### API Testing with curl
 
 ```bash
+# Bootstrap once; use this header on every subsequent API request
+SESSION_ID="11111111-1111-4111-8111-111111111111"
+curl -X POST http://localhost:9897/api/session -H "X-Session-Id: $SESSION_ID"
+
 # Get scenario info
-curl http://localhost:9897/api/scenario
+curl http://localhost:9897/api/scenario -H "X-Session-Id: $SESSION_ID"
 
 # Get all wings
-curl http://localhost:9897/api/wings
+curl http://localhost:9897/api/wings -H "X-Session-Id: $SESSION_ID"
 
 # Send a chat message
 curl -X POST http://localhost:9897/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"wing_id": "ops_wing", "phase_id": "d_minus_90", "message": "What is the current status?"}'
+  -H "X-Session-Id: $SESSION_ID" \
+  -d '{"wing_id": "operations_logistic", "message": "What is the current status?"}'
 
 # Advance phase
-curl -X POST http://localhost:9897/api/phase/advance
+curl -X POST http://localhost:9897/api/phase/advance -H "X-Session-Id: $SESSION_ID"
 
 # Get injects for current phase
-curl http://localhost:9897/api/injects
+curl http://localhost:9897/api/injects -H "X-Session-Id: $SESSION_ID"
 ```
 
 ### Data Validation

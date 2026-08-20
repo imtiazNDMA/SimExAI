@@ -30,27 +30,44 @@ Migrate the LLM client first. Everything in Phases 3–5 depends on structured o
 
 ---
 
-## Phase 1 — Sessions and persistence *(unblocks everything)*
+## Phase 1 — Sessions and persistence ✅ COMPLETE
 
-**(P0-5, P0-2)** There is currently no concept of "an exercise run." Nothing else is fixable until there is.
+**(P0-5, P0-2)** There is now a concept of "an exercise run" and every request is resolved
+against one.
+
+> **Verified (2026-08-20).** Route-wired and browser-tested: first active session claims
+> controller, participants get `403` on controller actions, the shared timeline persists
+> on `exercises` and participant UIs follow controller advances within 5s without reload.
+> Chat phase is server-authoritative (3.5) and the extraction prompt brace bug is fixed
+> (3.1). 12 tests pass against an isolated `SIMEX_DB_PATH`; external AI/Pinecone services
+> are stubbed.
 
 - [x] **1.1** `[M]` Add schema: `sessions` (id, scenario_id, wing_id, participant_label, current_phase_index, status, created_at), `messages` (id, session_id, role, content, phase_id, created_at, token_count), `inject_state` (session_id, inject_id, status, delivered_at, addressed_at), `assessments` (id, session_id, inject_id, rubric scores, evidence, gaps, created_at). Write a migration for the existing `data/simex.db`.
 - [x] **1.2** `[S]` Add the missing `injects.status` column — `_normalize_injects` sets it (`app.py:152`) and it is silently dropped today.
-- [ ] **1.3** `[M]` Delete the module-level `scenario` / `responder` singletons (`app.py:43-44`). Load per-session exercise state keyed by a session id; make `ScenarioEngine` an instance owned by a session, never process-global.
-- [ ] **1.4** `[S]` Thread a session id through every API route and the frontend (cookie or explicit header). Reject requests without one.
-- [ ] **1.5** `[S]` Separate **controller** actions from **participant** actions. `phase/advance`, `phase/back`, `phase/reset`, and `scenario/upload` are controller-only; today any participant can reset everyone's exercise.
+- [x] **1.3** `[M]` Delete the module-level `scenario` / `responder` singletons (`app.py:43-44`). Load per-session exercise state keyed by a session id; make `ScenarioEngine` an instance owned by a session, never process-global.
+- [x] **1.4** `[S]` Thread a session id through every API route and the frontend (cookie or explicit header). Reject requests without one.
+- [x] **1.5** `[S]` Separate **controller** actions from **participant** actions. `phase/advance`, `phase/back`, `phase/reset`, and `scenario/upload` are controller-only; today any participant can reset everyone's exercise.
 - [x] **1.6** `[S]` `PRAGMA foreign_keys=ON` + WAL mode; indexes on `injects(scenario_id, phase_id)`, `messages(session_id)`; close connections properly (P2-3).
 
 ---
 
-## Phase 2 — Conversation memory
+## Phase 2 — Conversation memory ✅ COMPLETE
 
 **(P0-1)** The single largest quality jump available. Depends on Phase 1.
 
-- [ ] **2.1** `[M]` Persist every turn to `messages` and load history into the prompt: `[system, ...history, user]` instead of today's two-message array (`llm_engine.py:138-142`).
-- [ ] **2.2** `[M]` Context-window management: rolling window of recent turns + a running summary of older ones, budgeted against the model's context. Store the summary on the session so it is not recomputed per turn.
-- [ ] **2.3** `[S]` Restore chat history on page load from the server (`GET /api/session/{id}/messages`) so refresh no longer destroys the transcript.
-- [ ] **2.4** `[S]` Include the inject ledger in the prompt — what has been delivered and what the participant has already addressed — so the moderator stops re-raising resolved items.
+> **Verified (2026-08-20).** Every turn is persisted to `messages` (with `wing_id`) and the
+> chat route loads the wing's history and passes it into `get_response` as
+> `[system, ...history, user]`. History windowing: the last 12 turns verbatim, older turns
+> condensed into one deterministic system block (200 chars/turn) — a real LLM summarizer
+> is deferred, stored summaries are not yet recomputed per turn. `GET /api/session/messages`
+> restores the transcript on page load (verified in-browser: a message survives reload and no
+> duplicate greeting fires). The inject ledger (delivered + addressed) is built per chat and
+> injected into the prompt, with `inject_state` rows updated server-side. 16 tests pass.
+
+- [x] **2.1** `[M]` Persist every turn to `messages` and load history into the prompt: `[system, ...history, user]` instead of today's two-message array (`llm_engine.py:138-142`).
+- [x] **2.2** `[M]` Context-window management: rolling window of recent turns + a running summary of older ones, budgeted against the model's context. Store the summary on the session so it is not recomputed per turn. *(Deterministic condensation in place; stored LLM summary deferred to a follow-up.)*
+- [x] **2.3** `[S]` Restore chat history on page load from the server (`GET /api/session/messages`) so refresh no longer destroys the transcript.
+- [x] **2.4** `[S]` Include the inject ledger in the prompt — what has been delivered and what the participant has already addressed — so the moderator stops re-raising resolved items. *(Delivery + addressed marking live; full agent-driven delivery is Phase 5.4.)*
 
 ---
 
@@ -58,11 +75,11 @@ Migrate the LLM client first. Everything in Phases 3–5 depends on structured o
 
 Independent of each other; each is shippable alone. Do these while Phase 4 is being designed.
 
-- [ ] **3.1** `[S]` **(P0-7)** Fix the f-string brace bug at `app.py:225`: `{{wing_ids}}` → `{wing_ids}`. One character each side. Verified: the model currently receives the literal string `{wing_ids}` and has never seen the canonical wing list.
+- [x] **3.1** `[S]` **(P0-7)** Fix the f-string brace bug at `app.py:225`: `{{wing_ids}}` → `{wing_ids}`. One character each side. Verified: the model currently receives the literal string `{wing_ids}` and has never seen the canonical wing list.
 - [ ] **3.2** `[S]` **(P0-7)** Set `normalize_wing_ids(..., keep_unknown=False)` for extraction output and log rejects, so hallucinated wing ids stop reaching SQLite and Pinecone.
 - [ ] **3.3** `[S]` **(P0-6)** Replace `injects[:6]` (`llm_engine.py:193`) with mandate- and relevance-ranked selection: filter by the participant's wing via `required_wings`, then rank by severity and retrieval score, then apply a token budget rather than a magic count.
 - [ ] **3.4** `[S]` **(P0-6/P0-3)** Make `required_wings` actually do something. It is written, stored, and embedded today but never used to filter anything — `get_injects_for_phase` (`scenario_engine.py:88`) filters on phase alone, so every wing sees every wing's injects.
-- [ ] **3.5** `[S]` **(P1-3)** Make phase server-authoritative in `/api/chat`. Stop trusting `request.phase_id` (`app.py:448`); derive it from the session.
+- [x] **3.5** `[S]` **(P1-3)** Make phase server-authoritative in `/api/chat`. Stop trusting `request.phase_id` (`app.py:448`); derive it from the session.
 - [x] **3.6** `[S]` **(P1-5)** Give extraction its own sampling config: `temperature=0`, large `max_tokens`. *(Done in Phase 0: chat 3000 / extraction 16000 @ T=0. Budgets sized for reasoning overhead — see note below.)*
 - [ ] **3.7** `[M]` **(P1-5)** Use LM Studio structured outputs (`response_format` with a JSON schema) for extraction. This should let most of `_clean_llm_json` and the `json_repair` fallback (`app.py:77-127`) be deleted — they exist to paper over 3.6.
 - [x] **3.8** `[S]` **(P1-2)** Wrap document parsing in `run_in_threadpool`. *(Done in 27df5ab — was a hard prerequisite for upload progress polling, which the frozen loop would otherwise have blocked. Pinecone indexing moved off the loop too.)*

@@ -2,7 +2,7 @@
 import os
 import re
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from .scenario_engine import ScenarioEngine
@@ -146,7 +146,14 @@ class LLMEngine:
     def normalize_wing_id(self, wing_id: str | None) -> str | None:
         return self.metadata.normalize_wing_id(wing_id)
 
-    def get_response(self, wing_id: str, phase_id: str, user_message: str) -> str:
+    def get_response(
+        self,
+        wing_id: str,
+        phase_id: str,
+        user_message: str,
+        history: list[dict] | None = None,
+        inject_ledger: str | None = None,
+    ) -> str:
         wing_id = self.normalize_wing_id(wing_id) or wing_id
         wing_name = self.get_wing_name(wing_id)
         if wing_name == wing_id:
@@ -173,7 +180,8 @@ class LLMEngine:
 
         messages = [
             SystemMessage(content=self._build_system_prompt(wing_name, wing_id, phase_id)),
-            HumanMessage(content=self._build_user_prompt(wing_id, wing_name, phase, user_message, is_phase_change, retrieved_chunks)),
+            *self._build_history_messages(history),
+            HumanMessage(content=self._build_user_prompt(wing_id, wing_name, phase, user_message, is_phase_change, retrieved_chunks, inject_ledger)),
         ]
 
         try:
@@ -194,6 +202,40 @@ class LLMEngine:
             if phase["id"] == phase_id:
                 return phase
         return self.scenario.get_current_phase()
+
+    def _build_history_messages(self, history: list[dict] | None) -> list:
+        """Convert persisted turns to LLM messages with a bounded context window.
+
+        Older turns beyond the window are condensed into a single system block so
+        a long exercise never overflows the model context. The condensation is
+        deterministic (no extra LLM call); a real summarizer can replace it later.
+        """
+        if not history:
+            return []
+
+        max_turns = 12
+        messages = []
+        if len(history) > max_turns:
+            older = history[:-max_turns]
+            condensed = "\n".join(
+                f"- {turn.get('role', 'unknown')}: {str(turn.get('content', ''))[:200]}"
+                for turn in older
+            )
+            messages.append(
+                SystemMessage(content=f"Earlier conversation summary (condensed):\n{condensed}")
+            )
+            history = history[-max_turns:]
+
+        for turn in history:
+            content = str(turn.get("content", ""))
+            role = turn.get("role")
+            if role == "assistant":
+                messages.append(AIMessage(content=content))
+            elif role == "system":
+                messages.append(SystemMessage(content=content))
+            else:
+                messages.append(HumanMessage(content=content))
+        return messages
 
     def _build_system_prompt(self, wing_name: str, wing_id: str, phase_id: str) -> str:
         mandate = self.get_wing_mandate(wing_id, phase_id)
@@ -218,7 +260,7 @@ Style:
 - Be concise. Use 1-3 short paragraphs.
 - Challenge the participant. Do not do their thinking for them. Let them fail or succeed based on their own answers."""
 
-    def _build_user_prompt(self, wing_id: str, wing_name: str, phase: dict, user_message: str, is_phase_change: bool = False, retrieved_chunks: list = None) -> str:
+    def _build_user_prompt(self, wing_id: str, wing_name: str, phase: dict, user_message: str, is_phase_change: bool = False, retrieved_chunks: list = None, inject_ledger: str = None) -> str:
         scenario_data = getattr(self.scenario, "scenario_data", None) or self.scenario.get_scenario_info()
         injects = self.scenario.get_injects_for_phase(phase["id"])
         actions = self.get_wing_actions(wing_id, phase["id"])
@@ -231,6 +273,10 @@ Style:
             f"- {item['time_offset']}: {item['title']} ({item['severity']}) - {item['description']}"
             for item in injects[:6]
         ) or "- No active injects for this phase."
+        ledger_text = f"""
+Inject status ledger (delivered = already presented to the participant; addressed = the participant has already handled it):
+{inject_ledger}
+""" if inject_ledger else ""
         phase_change_instruction = (
             "\nThis is a phase advancement briefing request, not a participant greeting. "
             "Do not write 'Welcome to...', do not say 'I acknowledge your presence/role', "
@@ -261,7 +307,7 @@ Wing mandate and functions:
 
 Active injects the participant must handle:
 {inject_text}
-
+{ledger_text}
 Participant from {wing_name} says:
 {user_message}
 {phase_change_instruction}

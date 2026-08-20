@@ -1,6 +1,9 @@
 """SimEx AI Backend — FastAPI application."""
 from datetime import datetime, timezone
-from fastapi import FastAPI, File, UploadFile
+from dataclasses import dataclass
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -19,7 +22,24 @@ from .scenario_engine import PHASES, ScenarioEngine
 from .document_parser import parse_document
 from .mandate import MandateRegistry
 from .vector_store import VectorStore
-from .database import init_db, save_scenario, save_injects
+from .database import (
+    bind_session_wing,
+    change_exercise_phase,
+    ensure_session,
+    get_inject_state,
+    init_db,
+    load_exercise,
+    load_messages,
+    load_session,
+    mark_inject_addressed,
+    mark_injects_delivered,
+    reset_exercise_phase,
+    save_injects,
+    save_message,
+    save_scenario,
+    touch_session,
+    update_exercise,
+)
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -43,12 +63,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize engines
-scenario = ScenarioEngine()
-responder = LLMEngine(scenario)
+# Shared infrastructure is stateless with respect to an exercise. Scenario and
+# responder instances are instead constructed from persisted exercise state.
 try:
     vector_store = VectorStore()
-    responder.set_vector_store(vector_store)
 except Exception as e:
     print(f"Warning: Could not initialize VectorStore: {e}")
     vector_store = None
@@ -56,6 +74,93 @@ except Exception as e:
 DATA_DIR = Path(__file__).parent.parent / "data"
 PHASE_IDS = {phase["id"] for phase in PHASES}
 mandates = MandateRegistry()
+
+
+@dataclass
+class SessionContext:
+    session: dict
+    exercise: dict
+    scenario: ScenarioEngine
+    responder: LLMEngine
+
+
+def _build_responder(scenario_engine: ScenarioEngine) -> LLMEngine:
+    session_responder = LLMEngine(scenario_engine)
+    if vector_store:
+        session_responder.set_vector_store(vector_store)
+    return session_responder
+
+
+def _context_for_session(session: dict) -> SessionContext:
+    exercise = load_exercise(session["exercise_id"])
+    if not exercise or exercise.get("status") != "active":
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    scenario_engine = ScenarioEngine(
+        exercise.get("scenario_id"),
+        exercise.get("injects_id"),
+        exercise.get("current_phase_index", 0),
+    )
+    return SessionContext(
+        session=session,
+        exercise=exercise,
+        scenario=scenario_engine,
+        responder=_build_responder(scenario_engine),
+    )
+
+
+def require_session(
+    session_id: Annotated[str | None, Header(alias="X-Session-Id")] = None,
+) -> SessionContext:
+    if not session_id or not session_id.strip():
+        raise HTTPException(status_code=400, detail="X-Session-Id header is required")
+    session = load_session(session_id.strip())
+    if not session or session.get("status") != "active":
+        raise HTTPException(status_code=404, detail="Session not found")
+    touch_session(session["id"])
+    return _context_for_session(session)
+
+
+def require_controller(
+    context: Annotated[SessionContext, Depends(require_session)],
+) -> SessionContext:
+    if context.session.get("role") != "controller":
+        raise HTTPException(status_code=403, detail="Controller role required")
+    return context
+
+
+def _bind_session_wing(context: SessionContext, wing_id: str) -> None:
+    if not bind_session_wing(
+        context.session["id"],
+        wing_id,
+        allow_change=context.session.get("role") == "controller",
+    ):
+        raise HTTPException(status_code=403, detail="Session is assigned to another wing")
+    context.session["wing_id"] = wing_id
+
+
+def _resolve_wing(context: SessionContext, wing_id: str) -> str:
+    """Normalize a wing id, rejecting unknown values before any session binding.
+
+    Binding happens before the responder validates the wing, so a malformed
+    first message must not permanently lock a participant into an invalid wing.
+    """
+    canonical_id = context.responder.normalize_wing_id(wing_id)
+    if not canonical_id:
+        raise HTTPException(status_code=400, detail=f"Unknown wing: {wing_id}")
+    return canonical_id
+
+
+def _format_inject_ledger(session_id: str, injects: list[dict]) -> str:
+    statuses = get_inject_state(session_id)
+    lines = [
+        f"- [{statuses.get(inject["id"], "pending")}] {inject.get("time_offset", "")}: {inject.get("title", "")}"
+        for inject in injects
+    ]
+    return "\n".join(lines) or "- No active injects for this phase."
+
+
+SessionDep = Annotated[SessionContext, Depends(require_session)]
+ControllerDep = Annotated[SessionContext, Depends(require_controller)]
 
 
 
@@ -91,11 +196,13 @@ _upload_jobs: dict[str, dict] = {}
 _UPLOAD_JOB_TTL_SECONDS = 900
 
 
-def _create_upload_job(filename: str) -> str:
+def _create_upload_job(filename: str, context: SessionContext) -> str:
     _prune_upload_jobs()
     job_id = uuid.uuid4().hex
     _upload_jobs[job_id] = {
         "job_id": job_id,
+        "session_id": context.session["id"],
+        "exercise_id": context.exercise["id"],
         "filename": filename,
         "stage": "queued",
         "message": "Preparing upload",
@@ -259,8 +366,28 @@ def _build_upload_user_content(parsed_data: dict) -> list[dict]:
 # ── API Routes ──────────────────────────────────────────────
 
 
+@app.post("/api/session")
+def bootstrap_session(
+    session_id: Annotated[str | None, Header(alias="X-Session-Id")] = None,
+):
+    """Create or resume the browser's session on the active exercise."""
+    if not session_id or not session_id.strip():
+        raise HTTPException(status_code=400, detail="X-Session-Id header is required")
+    session = ensure_session(session_id.strip())
+    if session.get("status") != "active":
+        raise HTTPException(status_code=409, detail="Session is no longer active")
+    context = _context_for_session(session)
+    return {
+        "id": session["id"],
+        "exercise_id": session["exercise_id"],
+        "role": session["role"],
+        "wing_id": session.get("wing_id"),
+        "current_phase": context.scenario.get_current_phase(),
+    }
+
+
 @app.post("/api/scenario/upload")
-async def upload_scenario(file: UploadFile = File(...)):
+async def upload_scenario(context: ControllerDep, file: UploadFile = File(...)):
     """Accept a scenario document and start extracting it in the background.
 
     Returns a job id immediately; poll /api/scenario/upload/{job_id} for
@@ -270,21 +397,36 @@ async def upload_scenario(file: UploadFile = File(...)):
     """
     filename = Path(file.filename or "scenario").name
     file_bytes = await file.read()
-    job_id = _create_upload_job(filename)
-    asyncio.create_task(_run_upload_job(job_id, file_bytes, filename))
+    job_id = _create_upload_job(filename, context)
+    asyncio.create_task(
+        _run_upload_job(
+            job_id,
+            file_bytes,
+            filename,
+            context.exercise["id"],
+            context.responder,
+        )
+    )
     return JSONResponse(status_code=202, content={"job_id": job_id, "filename": filename})
 
 
 @app.get("/api/scenario/upload/{job_id}")
-def get_upload_progress(job_id: str):
+def get_upload_progress(job_id: str, context: SessionDep):
     """Report progress for an upload job."""
     job = _upload_jobs.get(job_id)
-    if job is None:
+    if job is None or job["session_id"] != context.session["id"]:
         return JSONResponse(status_code=404, content={"message": "Unknown or expired upload job."})
-    return {**job, "elapsed_seconds": round(time.time() - job["started_at"], 1)}
+    public_job = {key: value for key, value in job.items() if key not in {"session_id", "exercise_id"}}
+    return {**public_job, "elapsed_seconds": round(time.time() - job["started_at"], 1)}
 
 
-async def _run_upload_job(job_id: str, file_bytes: bytes, filename: str):
+async def _run_upload_job(
+    job_id: str,
+    file_bytes: bytes,
+    filename: str,
+    exercise_id: str,
+    responder: LLMEngine,
+):
     """Use an uploaded file as LLM context and persist generated JSON only."""
     from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -296,7 +438,7 @@ Use both the extracted text and the attached full-page visual images.
 CRITICAL RULES FOR EXTRACTION:
 1. Preserve exact quantitative data (e.g., population counts, river names, road km damage) in your inject descriptions. Do not generalize.
 2. Align the events chronologically to the correct `phase_id` based on the timeline.
-3. Use only these canonical required_wings ids when assigning injects: {{wing_ids}}.
+3. Use only these canonical required_wings ids when assigning injects: {wing_ids}.
 
 Output ONLY valid JSON that matches this structure. No markdown formatting ticks around the JSON.
 {{
@@ -453,7 +595,13 @@ Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Ever
             except Exception as e:
                 print(f"Warning: Could not index uploaded scenario: {e}")
 
-        scenario.load_scenario(scenario_id, injects_id)
+        update_exercise(
+            exercise_id,
+            scenario_id=scenario_id,
+            injects_id=injects_id,
+            current_phase_index=0,
+        )
+        scenario = ScenarioEngine(scenario_id, injects_id)
         _update_upload_job(
             job_id, stage="done", done=True, message="Scenario ready",
             result={
@@ -475,91 +623,132 @@ Do NOT include ellipsis, placeholder comments, or "..." in the JSON output. Ever
 
 
 @app.get("/api/scenario")
-def get_scenario():
+def get_scenario(context: SessionDep):
     """Get current scenario details."""
-    return scenario.get_scenario_info()
+    return context.scenario.get_scenario_info()
 
 
 @app.get("/api/phases")
-def get_phases():
+def get_phases(context: SessionDep):
     """List all phases with active/completed status."""
-    return {"phases": scenario.get_all_phases()}
+    return {"phases": context.scenario.get_all_phases()}
 
 
 @app.post("/api/phase/advance")
-def advance_phase():
+def advance_phase(context: ControllerDep):
     """Advance to the next phase."""
-    next_phase = scenario.advance_phase()
+    previous_index = context.scenario.current_phase_index
+    exercise = change_exercise_phase(context.exercise["id"], 1, len(PHASES) - 1)
+    context.scenario.current_phase_index = exercise["current_phase_index"]
+    next_phase = (
+        context.scenario.get_current_phase()
+        if exercise["current_phase_index"] != previous_index
+        else None
+    )
     if next_phase is None:
-        return {"message": "Already at final phase", "phases": scenario.get_all_phases()}
+        return {"message": "Already at final phase", "phases": context.scenario.get_all_phases()}
     return {
         "message": f"Advanced to {next_phase['label']}",
         "current_phase": next_phase,
-        "phases": scenario.get_all_phases(),
-        "injects": scenario.get_current_injects(),
+        "phases": context.scenario.get_all_phases(),
+        "injects": context.scenario.get_current_injects(),
     }
 
 
 @app.post("/api/phase/back")
-def go_back_phase():
+def go_back_phase(context: ControllerDep):
     """Go back to the previous phase."""
-    prev_phase = scenario.go_back_phase()
+    previous_index = context.scenario.current_phase_index
+    exercise = change_exercise_phase(context.exercise["id"], -1, len(PHASES) - 1)
+    context.scenario.current_phase_index = exercise["current_phase_index"]
+    prev_phase = (
+        context.scenario.get_current_phase()
+        if exercise["current_phase_index"] != previous_index
+        else None
+    )
     if prev_phase is None:
-        return {"message": "Already at D-90", "phases": scenario.get_all_phases()}
+        return {"message": "Already at D-90", "phases": context.scenario.get_all_phases()}
     return {
         "message": f"Returned to {prev_phase['label']}",
         "current_phase": prev_phase,
-        "phases": scenario.get_all_phases(),
-        "injects": scenario.get_current_injects(),
+        "phases": context.scenario.get_all_phases(),
+        "injects": context.scenario.get_current_injects(),
     }
 
 
 @app.post("/api/phase/reset")
-def reset_phases():
-    """Reset to the default exercise and D Day."""
-    scenario.reset_to_default()
+def reset_phases(context: ControllerDep):
+    """Reset the shared exercise timeline to D-90, preserving its scenario."""
+    reset_exercise_phase(context.exercise["id"])
+    context.scenario.reset()
     return {
         "message": "Exercise reset to D-90",
-        "scenario": scenario.get_scenario_info(),
-        "phases": scenario.get_all_phases(),
-        "injects": scenario.get_current_injects(),
+        "scenario": context.scenario.get_scenario_info(),
+        "phases": context.scenario.get_all_phases(),
+        "injects": context.scenario.get_current_injects(),
     }
 
 
 @app.get("/api/wings")
-def get_wings():
+def get_wings(context: SessionDep):
     """List all NDMA wings."""
-    return {"wings": responder.get_wings()}
+    return {"wings": context.responder.get_wings()}
 
 
 @app.get("/api/wings/{wing_id}/actions")
-def get_wing_actions(wing_id: str):
+def get_wing_actions(wing_id: str, context: SessionDep):
     """Get wing actions for current phase."""
-    canonical_id = responder.normalize_wing_id(wing_id) or wing_id
-    phase = scenario.get_current_phase()
-    actions = responder.get_wing_actions(canonical_id, phase["id"])
+    canonical_id = _resolve_wing(context, wing_id)
+    _bind_session_wing(context, canonical_id)
+    phase = context.scenario.get_current_phase()
+    actions = context.responder.get_wing_actions(canonical_id, phase["id"])
     return {
         "wing_id": canonical_id,
-        "wing_name": responder.get_wing_name(canonical_id),
+        "wing_name": context.responder.get_wing_name(canonical_id),
         "phase": phase,
         "actions": actions,
     }
 
 
 @app.post("/api/chat")
-def chat(request: ChatRequest) -> ChatResponse:
+def chat(request: ChatRequest, context: SessionDep) -> ChatResponse:
     """Send a message and get a wing-specific response."""
-    phase = scenario.get_current_phase()
-    wing_id = responder.normalize_wing_id(request.wing_id) or request.wing_id
-    response_text = responder.get_response(
+    phase = context.scenario.get_current_phase()
+    wing_id = _resolve_wing(context, request.wing_id)
+    _bind_session_wing(context, wing_id)
+
+    history = [
+        message
+        for message in load_messages(context.session["id"])
+        if message.get("wing_id") in (None, wing_id)
+    ]
+
+    injects = context.scenario.get_current_injects()
+    mark_injects_delivered(context.session["id"], [inject["id"] for inject in injects])
+    for inject in injects:
+        if inject.get("title") and inject["title"].lower() in request.message.lower():
+            mark_inject_addressed(context.session["id"], inject["id"])
+    inject_ledger = _format_inject_ledger(context.session["id"], injects)
+
+    save_message(
+        context.session["id"], "user", request.message,
+        phase_id=phase["id"], wing_id=wing_id,
+    )
+    response_text = context.responder.get_response(
         wing_id=wing_id,
-        phase_id=request.phase_id if request.phase_id else phase["id"],
+        phase_id=phase["id"],
         user_message=request.message,
+        history=history,
+        inject_ledger=inject_ledger,
+    )
+    save_message(
+        context.session["id"], "assistant", response_text,
+        phase_id=phase["id"], wing_id=wing_id,
     )
 
     return ChatResponse(
         wing_id=wing_id,
-        wing_name=responder.get_wing_name(wing_id),
+        wing_name=context.responder.get_wing_name(wing_id),
         phase_id=phase["id"],
         phase_label=phase["label"],
         response=response_text,
@@ -567,11 +756,17 @@ def chat(request: ChatRequest) -> ChatResponse:
     )
 
 
+@app.get("/api/session/messages")
+def get_session_messages(context: SessionDep):
+    """Return the session transcript oldest-first for history restore on page load."""
+    return {"messages": load_messages(context.session["id"])}
+
+
 @app.get("/api/injects")
-def get_injects():
+def get_injects(context: SessionDep):
     """Get inject events for the current phase."""
-    phase = scenario.get_current_phase()
-    injects = scenario.get_current_injects()
+    phase = context.scenario.get_current_phase()
+    injects = context.scenario.get_current_injects()
     return {
         "phase": phase,
         "injects": injects,
@@ -600,7 +795,7 @@ class TTSRequest(_PydanticBase):
     text: str
 
 @app.post("/api/tts")
-def text_to_speech(request: TTSRequest):
+def text_to_speech(request: TTSRequest, _context: SessionDep):
     """Generate speech audio with word-level timestamps for highlighting."""
     engine = _get_tts()
     if engine is None:

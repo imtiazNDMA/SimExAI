@@ -5,7 +5,6 @@ from typing import Optional
 
 class ChatRequest(BaseModel):
     wing_id: str
-    phase_id: str
     message: str
 
 

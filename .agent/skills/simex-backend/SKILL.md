@@ -80,6 +80,7 @@ to `MandateRegistry`.
 
 | Method | Path | Description |
 |---|---|---|
+| `POST` | `/api/session` | Create or resume a browser session |
 | `GET` | `/api/scenario` | Get current scenario details |
 | `GET` | `/api/phases` | List all phases with current active phase |
 | `POST` | `/api/phase/advance` | Advance to next phase |
@@ -90,11 +91,13 @@ to `MandateRegistry`.
 
 ### Chat Request/Response
 
+All API requests send `X-Session-Id`. The server derives the phase from the
+session's shared exercise; clients do not submit a phase.
+
 ```json
 // POST /api/chat
 {
     "wing_id": "operations_logistic",
-    "phase_id": "d_minus_90",
     "message": "What is the current situation?"
 }
 

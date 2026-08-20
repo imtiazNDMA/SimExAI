@@ -1,5 +1,6 @@
 import sqlite3
 import json
+import os
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -7,7 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-DB_PATH = DATA_DIR / "simex.db"
+DB_PATH = Path(os.getenv("SIMEX_DB_PATH", DATA_DIR / "simex.db"))
 
 
 def _now() -> str:
@@ -37,7 +38,7 @@ def get_connection():
 
 def init_db():
     """Create tables if they don't exist."""
-    DATA_DIR.mkdir(exist_ok=True, parents=True)
+    DB_PATH.parent.mkdir(exist_ok=True, parents=True)
     with get_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS scenarios (
@@ -114,6 +115,7 @@ def init_db():
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
                 phase_id TEXT,
+                wing_id TEXT,
                 created_at TEXT NOT NULL,
                 token_count INTEGER,
                 FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
@@ -174,6 +176,10 @@ def _migrate():
         if existing and "status" not in existing:
             conn.execute("ALTER TABLE injects ADD COLUMN status TEXT DEFAULT 'pending'")
 
+        existing_messages = {row["name"] for row in conn.execute("PRAGMA table_info(messages)")}
+        if existing_messages and "wing_id" not in existing_messages:
+            conn.execute("ALTER TABLE messages ADD COLUMN wing_id TEXT")
+
 
 # ── Exercises ───────────────────────────────────────────────
 
@@ -212,6 +218,29 @@ def update_exercise(exercise_id: str, **fields) -> None:
         )
 
 
+def change_exercise_phase(exercise_id: str, delta: int, max_index: int) -> Dict[str, Any]:
+    """Move the shared exercise phase by one bounded step and return its row."""
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE exercises SET current_phase_index = MAX(0, MIN(?, current_phase_index + ?)),"
+            " updated_at = ? WHERE id = ?",
+            (max_index, delta, _now(), exercise_id),
+        )
+        row = conn.execute("SELECT * FROM exercises WHERE id = ?", (exercise_id,)).fetchone()
+    return dict(row) if row else {}
+
+
+def reset_exercise_phase(exercise_id: str) -> Dict[str, Any]:
+    """Return an exercise to D-90 without detaching its scenario."""
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE exercises SET current_phase_index = 0, updated_at = ? WHERE id = ?",
+            (_now(), exercise_id),
+        )
+        row = conn.execute("SELECT * FROM exercises WHERE id = ?", (exercise_id,)).fetchone()
+    return dict(row) if row else {}
+
+
 def get_or_create_active_exercise() -> Dict[str, Any]:
     """Return the most recent active exercise, creating one if none exists."""
     with get_connection() as conn:
@@ -247,6 +276,47 @@ def create_session(
     return load_session(session_id)
 
 
+def ensure_session(session_id: str) -> Dict[str, Any]:
+    """Return a browser session, atomically creating it on the active exercise."""
+    now = _now()
+    with get_connection() as conn:
+        # Serialize bootstrap so concurrent first visitors cannot both become controller.
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+        if row:
+            conn.execute(
+                "UPDATE sessions SET last_seen_at = ? WHERE id = ?", (now, session_id)
+            )
+            return dict(row)
+
+        exercise = conn.execute(
+            "SELECT * FROM exercises WHERE status = 'active' ORDER BY created_at DESC LIMIT 1"
+        ).fetchone()
+        if exercise is None:
+            exercise_id = uuid.uuid4().hex
+            conn.execute(
+                "INSERT INTO exercises (id, scenario_id, injects_id, current_phase_index,"
+                " status, created_at, updated_at) VALUES (?, NULL, NULL, 0, 'active', ?, ?)",
+                (exercise_id, now, now),
+            )
+        else:
+            exercise_id = exercise["id"]
+
+        has_controller = conn.execute(
+            "SELECT 1 FROM sessions WHERE exercise_id = ? AND status = 'active'"
+            " AND role = 'controller' LIMIT 1",
+            (exercise_id,),
+        ).fetchone()
+        role = "participant" if has_controller else "controller"
+        conn.execute(
+            "INSERT INTO sessions (id, exercise_id, role, status, created_at, last_seen_at)"
+            " VALUES (?, ?, ?, 'active', ?, ?)",
+            (session_id, exercise_id, role, now, now),
+        )
+        row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    return dict(row)
+
+
 def load_session(session_id: str) -> Dict[str, Any]:
     if not session_id:
         return {}
@@ -268,6 +338,17 @@ def touch_session(session_id: str, wing_id: Optional[str] = None) -> None:
             )
 
 
+def bind_session_wing(session_id: str, wing_id: str, allow_change: bool = False) -> bool:
+    """Bind a participant to its first wing; controllers may switch for facilitation."""
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "UPDATE sessions SET wing_id = ?, last_seen_at = ? WHERE id = ?"
+            " AND (wing_id IS NULL OR wing_id = ? OR ?)",
+            (wing_id, _now(), session_id, wing_id, allow_change),
+        )
+        return cursor.rowcount == 1
+
+
 # ── Transcript ──────────────────────────────────────────────
 
 
@@ -277,12 +358,13 @@ def save_message(
     content: str,
     phase_id: Optional[str] = None,
     token_count: Optional[int] = None,
+    wing_id: Optional[str] = None,
 ) -> int:
     with get_connection() as conn:
         cur = conn.execute(
-            "INSERT INTO messages (session_id, role, content, phase_id, created_at, token_count)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (session_id, role, content, phase_id, _now(), token_count),
+            "INSERT INTO messages (session_id, role, content, phase_id, wing_id, created_at, token_count)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (session_id, role, content, phase_id, wing_id, _now(), token_count),
         )
         return cur.lastrowid
 
@@ -307,6 +389,39 @@ def load_messages(session_id: str, limit: Optional[int] = None) -> List[Dict[str
                 "SELECT * FROM messages WHERE session_id = ? ORDER BY id ASC", (session_id,)
             ).fetchall()
     return [dict(row) for row in rows]
+
+
+# ── Inject lifecycle ledger ─────────────────────────────────
+
+
+def mark_injects_delivered(session_id: str, inject_ids: list[str]) -> None:
+    """Record that the current-phase injects have been shown to the participant."""
+    with get_connection() as conn:
+        for inject_id in inject_ids:
+            conn.execute(
+                "INSERT OR IGNORE INTO inject_state (session_id, inject_id, status, delivered_at)"
+                " VALUES (?, ?, 'delivered', ?)",
+                (session_id, inject_id, _now()),
+            )
+
+
+def mark_inject_addressed(session_id: str, inject_id: str) -> None:
+    """Record that the participant has already handled an inject."""
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE inject_state SET status = 'addressed', addressed_at = ?"
+            " WHERE session_id = ? AND inject_id = ?",
+            (_now(), session_id, inject_id),
+        )
+
+
+def get_inject_state(session_id: str) -> dict[str, str]:
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT inject_id, status FROM inject_state WHERE session_id = ?",
+            (session_id,),
+        ).fetchall()
+    return {row["inject_id"]: row["status"] for row in rows}
 
 
 def save_scenario(scenario_data: Dict[str, Any]):

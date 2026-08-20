@@ -16,10 +16,15 @@ PHASES = [
 class ScenarioEngine:
     """State machine for managing SimEx exercise progression."""
 
-    def __init__(self, scenario_id: str = None, injects_id: str = None):
+    def __init__(
+        self,
+        scenario_id: str = None,
+        injects_id: str = None,
+        current_phase_index: int = 0,
+    ):
         self.scenario_id = scenario_id
         self.injects_id = injects_id
-        self.current_phase_index = 0
+        self.current_phase_index = max(0, min(current_phase_index, len(PHASES) - 1))
         self.scenario_data = self._load_scenario()
         self.injects_data = self._load_injects()
 

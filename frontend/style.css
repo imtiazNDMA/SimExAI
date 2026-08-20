@@ -364,6 +364,8 @@ html[data-theme="light"] .welcome-scenario-pill {
   transition: all var(--t-fast) var(--ease);
   white-space: nowrap;
 }
+
+.ctrl-btn[hidden] { display: none; }
 .ctrl-btn:hover:not(:disabled) {
   background: var(--surface-1);
   color: var(--text);

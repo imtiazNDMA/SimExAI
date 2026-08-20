@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-08-20
 **Branch:** `feature/lmstudio-migration` → PR [#2](https://github.com/imtiazNDMA/SimExAI/pull/2) (targets `RAG`, not `main`)
-**Status:** 10 commits, pushed, 5 tests passing, nothing merged yet.
+**Status:** Phase 1 + 2 complete and verified (16 tests passing, browser-verified transcript restore).
 
 This file is the entry point for a new session in any tool (Claude Code, opencode, etc.).
 It records **what is true now** and **what is not obvious from the code**. It deliberately
@@ -35,9 +35,9 @@ phase.
 | Phase | Done | Notes |
 |---|---|---|
 | 0 — Enabling infrastructure | **6/6 ✅** | Ollama → LM Studio, launcher |
-| 1 — Sessions and persistence | **3/6** | Schema landed; **app.py not yet wired** |
-| 2 — Conversation memory | 0/4 | Blocked on Phase 1 |
-| 3 — Correctness fixes | 2/11 | 3.6, 3.8 done |
+| 1 — Sessions and persistence | **6/6 ✅** | Schema + full route wiring; first session = controller |
+| 2 — Conversation memory | **4/4 ✅** | History persisted + windowed, transcript restore, inject ledger |
+| 3 — Correctness fixes | 4/11 | 3.1, 3.5, 3.6, 3.8 done |
 | 4 — RAG rebuild | 0/9 | The reranker work |
 | 5 — The agent loop | 0/6 | Tool calling verified as viable |
 | 6 — Safety and guardrails | 0/7 | |
@@ -62,36 +62,62 @@ Default port **9897**.
 closes; `PRAGMA foreign_keys=ON`; WAL; indexes. **Additive and currently inert** — no
 route reads or writes any of it yet.
 
+**Session wiring — Phase 1.3–1.5 complete.** Module-level `scenario`/`responder`
+singletons (`app.py:47-48` in the old layout) are gone. Every route now resolves a
+per-request `SessionContext` (session → exercise → fresh `ScenarioEngine` +
+`LLMEngine`) from `X-Session-Id`. `POST /api/session` bootstraps a browser
+localStorage UUID: the first active session on an exercise claims `role='controller'`;
+later sessions are participants. Controller-only actions (`upload`, `advance`, `back`,
+`reset`) return `403` for participants. The shared timeline now lives on `exercises`
+and is mutated with bounded, persistent SQL transitions (`change_exercise_phase`,
+`reset_exercise_phase`). Upload jobs carry their originating `session_id`/`exercise_id`
+and are visible only to the owner. Chat phase is server-authoritative — clients no
+longer submit `phase_id` (also closes 3.5), and the extraction prompt's `{{wing_ids}}`
+brace bug is fixed (3.1). Participants are bound to their first wing; controllers may
+switch wings to facilitate. The frontend polls `/api/phases` every 5s (and on tab
+focus) so participant timelines follow controller advances without reload.
+
 **Upload progress overlay** (`27df5ab`). `POST /api/scenario/upload` now returns `202` with
 a `job_id`; `GET /api/scenario/upload/{job_id}` reports real stage and chunk progress.
 Full-screen overlay replaces the old `alert()`. Word `.doc` rejection and no-Word
 text-only fallback.
 
+**Test scaffolding.** `tests/conftest.py` redirects `SIMEX_DB_PATH` before app import so
+tests never touch `data/simex.db`. 12 tests pass, including the full route-header matrix,
+first-controller/participant bootstrap, shared-phase persistence, participant wing
+binding, upload-job ownership, and server-authoritative chat phase.
+
+**Conversation memory — Phase 2 complete.** Every turn is persisted to `messages`
+(now carrying `wing_id` via schema migration) and the chat route loads the wing's history
+and passes it into `get_response` as `[system, ...history, user]`. History windowing:
+the last 12 turns verbatim plus a deterministic condensed block for older turns
+(200 chars/turn; a real LLM summarizer is deferred — see §8). `GET /api/session/messages`
+restores the transcript on page load; browser-verified that a message survives a reload
+without a duplicate greeting (the greeting itself now renders as a user bubble so the live
+view matches the restored one). The inject ledger is built per chat — injects for the
+current phase are marked `delivered`, ones whose title appears in the user message marked
+`addressed`, and the formatted ledger is injected into the prompt so resolved items stop
+being re-raised. 16 tests pass, including 4 HTTP-contract tests covering persistence,
+windowing, transcript restore, and the ledger. The Phase 1 `FakeResponder` and the
+`RecordingLLM` fake both exercise the real route seam.
+
 ---
 
 ## 3. Immediate next step
 
-**Phase 1, tasks 1.3–1.5** — wire `backend/app.py` to the session schema. This is what
-actually closes P0-5 (global mutable state); the tables alone change nothing.
-
-1. **1.3** Delete the module-level singletons at `backend/app.py:47-48`
-   (`scenario = ScenarioEngine()`, `responder = LLMEngine(scenario)`). Resolve per-session
-   state instead.
-2. **1.4** Thread a session id through every route and the frontend. Agreed approach:
-   `localStorage` on the client, sent as an `X-Session-Id` header, created on first load.
-3. **1.5** Gate controller-only actions: `phase/advance`, `phase/back`, `phase/reset`,
-   `scenario/upload`. Today any participant can reset everyone's exercise.
-
-Then **Phase 2** (conversation memory) — the single largest quality jump available, and
-unblocked the moment sessions exist.
+**Phase 3 (correctness fixes)** — Phase 2 is done. 3.2, 3.3, 3.4, 3.7, 3.9, 3.10, 3.11
+remain. **3.4** (`required_wings` filtering) pairs naturally with **3.3** (mandate-ranked
+inject selection) and both sharpen what Phase 5.4 needs. Do these while Phase 4 (RAG
+rebuild) is being designed; Phase 8.1b (unit coverage of `ScenarioEngine`, DB layer) can
+ride along.
 
 ### Design decisions already made (do not re-litigate)
 
 - **The phase lives on `exercises`, not `sessions`.** A SimEx is a shared timeline: all ten
   wings sit at D-90 together and only the Controller advances it. `todos.md` 1.1 originally
   said otherwise; the schema supersedes it.
-- **First session on an exercise claims `role='controller'`.** No credentials — real auth
-  is task 6.5, which can layer onto the same `role` column.
+- **First active session on an exercise claims `role='controller'`.** No credentials — real
+  auth is task 6.5, which can layer onto the same `role` column.
 - **PR #2 targets `RAG`, not `main`**, matching the existing PR #1.
 
 ---
@@ -112,9 +138,23 @@ tool calling works (`finish_reason: tool_calls`, valid JSON args); vision works 
 through LangChain's async path with the same `image_url` shape the upload pipeline builds).
 
 **`backend/app.py:28` calls `init_db()` at import time.** Importing `backend.app` in a test
-migrates the **real** `data/simex.db`. It is empty and the migration is additive, so no harm
-so far — but `tests/conftest.py` should redirect `database.DB_PATH` before import. Not yet
-written.
+migrates the **real** `data/simex.db`. `tests/conftest.py` now sets `SIMEX_DB_PATH` to a
+temp database before the app is imported, so tests never touch the real one. The
+`SIMEX_DB_PATH` override applies to `database.DB_PATH` — the env var replaces the whole
+path, not just the filename.
+
+**Every API route now requires `X-Session-Id`.** `POST /api/session` is the only
+create-if-unknown endpoint; every other route returns `400` without a header and `404`
+for an unknown session. The frontend stores a UUID in `localStorage`
+(`simexai-session-id`); a fresh browser profile or cleared storage creates a new
+participant session. Two tabs in the same browser share one session and one role.
+
+**Sessions are never auto-expired.** `last_seen_at` is written but not yet read; a dead
+controller browser keeps the role until its session row is marked `status='inactive'`
+manually (the frontend then rotates its UUID after a `409`). Real auth (6.5) supersedes
+this. The `SessionContext`/`LLMEngine` are rebuilt per request, so a restart or a
+controller phase change is always seen by the next request — no per-session cache to
+invalidate.
 
 **Tests were deleted by accident, not by choice.** Commit `c198a2e` ("fix: ensure perfectly
 synchronized TTS highlighting") removed 243 lines of test coverage as collateral. Restored
@@ -123,6 +163,21 @@ from `main` in `0e40bda`.
 **`en_core_web_sm` is an undeclared runtime dependency.** `uv sync` strips it; Kokoro TTS
 then silently re-downloads it over the network on the first TTS call. Works here, fails in
 an air-gapped deployment. Logged as `todos.md` 8.1c.
+
+**Each LLM chat turn takes ~10s** (reasoning overhead on this model). Browser tests must
+wait for the **typing indicator to appear and disappear** rather than counting reply
+bubbles — the typing indicator is itself a `.message.system` bubble, so bubble counts
+can look correct while a reply is still generating (and before it is persisted). Reloading
+mid-generation drops the in-flight assistant turn from the restored transcript.
+
+**History windowing is deterministic, not a real summary.** 2.2 stores no per-session
+summary yet: older turns are condensed into one system block at 200 chars/turn on every
+chat. Cheap and stable, but it does not meet the "stored running summary" intent — the
+checklist carries an explicit follow-up.
+
+**The greeting now renders as a user bubble.** `sendGreeting` was persisting its user
+message server-side without showing it in the live transcript, so a reload made one extra
+bubble appear. It now calls `addMessage(wingId, 'user', ...)` to match the restored view.
 
 **`--reload` orphans workers.** Force-killing uvicorn leaves a `multiprocessing-fork` child
 holding the port, and the socket table still names the dead parent. Kill children first,
@@ -152,7 +207,7 @@ start.bat -Port 8080      # different port
 start.bat -NoSync         # skip uv sync, fast restart
 start.bat -NoBrowser      # no browser
 
-.venv/Scripts/python.exe -m pytest tests/ -q     # 5 tests, ~5s
+.venv/Scripts/python.exe -m pytest tests/ -q     # 16 tests, ~4s
 ```
 
 **Prerequisites:** LM Studio running with an OpenAI-compatible server at
@@ -203,6 +258,13 @@ Tool-agnostic — use the nearest equivalent if your harness names them differen
 
 1. **Merge PR #1?** It adds a competing pure-batch `start.bat` and will conflict with this
    branch. A note was left on it; closing is the user's call.
-2. **`docs/test cases/`** is untracked and not mine — leave, commit, or ignore?
-3. **Phase 1 wiring changes the API contract** (session id required on every route). The
-   frontend must change with it — worth confirming before starting 1.4.
+2. **Session expiry / controller handoff.** Sessions are never auto-expired, so a dead
+   controller keeps the role until its row is manually marked `inactive`. Worth a policy:
+   stale `last_seen_at` threshold, explicit "end session" action, or defer to real auth
+   (6.5).
+3. **Reset semantics changed.** `POST /api/phase/reset` now resets the timeline to D-90
+   while preserving the uploaded scenario (previously it also cleared the scenario).
+   The confirm dialog text was updated to match.
+4. **2.2 summary is deterministic, not stored.** Older turns are condensed at 200
+   chars/turn per chat; no per-session LLM summary is persisted yet. Worth a follow-up
+   before Phase 4's query-rewrite task (4.6) leans on it.

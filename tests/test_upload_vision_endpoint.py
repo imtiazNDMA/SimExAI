@@ -31,9 +31,11 @@ class FakeUploadLLM:
     def __init__(self):
         self.calls = 0
         self.image_counts = []
+        self.system_contents = []
 
     async def ainvoke(self, messages):
         self.calls += 1
+        self.system_contents.append(messages[0].content)
         content = messages[1].content
         self.image_counts.append(
             sum(
@@ -71,6 +73,15 @@ class FakeUploadLLM:
         return result
 
 
+class FakeResponder:
+    def __init__(self, upload_llm):
+        self.upload_llm = upload_llm
+
+    @staticmethod
+    def format_llm_error(exc):
+        return str(exc)
+
+
 class UploadVisionEndpointTests(unittest.TestCase):
     def setUp(self):
         # Isolate the database so the test never touches data/simex.db.
@@ -84,15 +95,15 @@ class UploadVisionEndpointTests(unittest.TestCase):
         database.init_db()
 
         self.fake_llm = FakeUploadLLM()
-        self._original_upload_llm = app_module.responder.upload_llm
-        app_module.responder.upload_llm = self.fake_llm
+        self._original_build_responder = app_module._build_responder
+        app_module._build_responder = lambda _scenario: FakeResponder(self.fake_llm)
 
         # The upload path indexes into Pinecone; keep the test offline.
         self._original_vector_store = app_module.vector_store
         app_module.vector_store = None
 
     def tearDown(self):
-        app_module.responder.upload_llm = self._original_upload_llm
+        app_module._build_responder = self._original_build_responder
         app_module.vector_store = self._original_vector_store
         database.DB_PATH = self._original_db_path
 
@@ -109,10 +120,15 @@ class UploadVisionEndpointTests(unittest.TestCase):
             side_effect=lambda _docx_path, out_pdf: self._write_pdf(out_pdf, "Rendered DOCX page"),
         ):
             with TestClient(app_module.app) as client:
+                headers = {"X-Session-Id": "11111111-1111-4111-8111-111111111111"}
+                session = client.post("/api/session", headers=headers)
+                self.assertEqual(session.status_code, 200)
+                self.assertEqual(session.json()["role"], "controller")
                 for upload_path in (pdf_path, docx_path):
                     with upload_path.open("rb") as handle:
                         response = client.post(
                             "/api/scenario/upload",
+                            headers=headers,
                             files={"file": (upload_path.name, handle)},
                         )
                     # Extraction runs in the background; the POST only hands
@@ -122,7 +138,9 @@ class UploadVisionEndpointTests(unittest.TestCase):
 
                     deadline = time.time() + 30
                     while time.time() < deadline:
-                        job = client.get(f"/api/scenario/upload/{job_id}").json()
+                        job = client.get(
+                            f"/api/scenario/upload/{job_id}", headers=headers
+                        ).json()
                         if job["done"]:
                             break
                         time.sleep(0.05)
@@ -133,12 +151,17 @@ class UploadVisionEndpointTests(unittest.TestCase):
 
         # Each upload is a single page, so each LLM call carries exactly one image.
         self.assertEqual(self.fake_llm.image_counts, [1, 1])
+        self.assertNotIn("{wing_ids}", self.fake_llm.system_contents[0])
+        self.assertIn("operations_logistic", self.fake_llm.system_contents[0])
 
         with database.get_connection() as conn:
             scenarios = conn.execute(
                 "SELECT id, source_visual_page_count, source_visual_mode FROM scenarios"
             ).fetchall()
             inject_count = conn.execute("SELECT COUNT(*) FROM injects").fetchone()[0]
+            exercise = conn.execute(
+                "SELECT scenario_id, current_phase_index FROM exercises"
+            ).fetchone()
 
         self.assertEqual(len(scenarios), 2, "one scenario row per upload")
         for row in scenarios:
@@ -146,6 +169,8 @@ class UploadVisionEndpointTests(unittest.TestCase):
             self.assertEqual(row["source_visual_mode"], "full_page")
 
         self.assertEqual(inject_count, 2, "one inject per upload")
+        self.assertEqual(exercise["scenario_id"], job["result"]["scenario"]["id"])
+        self.assertEqual(exercise["current_phase_index"], 0)
 
     def _write_pdf(self, path: Path, text: str) -> None:
         pdf_doc = fitz.open()
