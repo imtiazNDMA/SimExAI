@@ -14,3 +14,10 @@ wheels/
 *.db
 *.sqlite3
 data/simex.db
+
+# Secrets and local agent config
+.env.bak*
+.env.*
+!.env.example
+.agents/
+.vscode/
