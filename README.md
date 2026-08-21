@@ -62,11 +62,18 @@ This checks prerequisites, creates `.env` from `.env.example` if missing, runs `
 verifies the configured LLM server is reachable, starts the backend, and opens
 http://localhost:9897 once it responds.
 
+The backend listens on `0.0.0.0` by default, so **other machines on the same network
+can reach it** at `http://<this-machine-ip>:9897`. On startup the script prints every
+usable address with its interface name, so you can tell the LAN address apart from
+virtual adapters (WSL/Hyper-V, VPNs). Windows Firewall may prompt on first run --
+allow access on the private network.
+
 Options (passed through to `start.ps1`):
 
 | Flag | Effect |
 | --- | --- |
 | `-Port 8080` | Run on a different port (default 9897) |
+| `-BindHost 127.0.0.1` | Listen on this machine only (default `0.0.0.0`, i.e. network-accessible) |
 | `-NoSync` | Skip `uv sync` for fast restarts |
 | `-NoBrowser` | Don't open the browser |
 
@@ -76,9 +83,10 @@ Options (passed through to `start.ps1`):
 # Install dependencies
 uv sync
 
-# Start backend server
-uv run uvicorn backend.app:app --reload --port 9897
+# Start backend server (0.0.0.0 = reachable from other machines on the network)
+uv run uvicorn backend.app:app --reload --host 0.0.0.0 --port 9897
 
 # Access the application
-# Open http://localhost:9897 in your browser
+# On this machine:    http://localhost:9897
+# From another machine: http://<this-machine-ip>:9897
 ```

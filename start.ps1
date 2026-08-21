@@ -12,6 +12,11 @@
 .PARAMETER Port
     Port for the backend. Default 9897.
 
+.PARAMETER BindHost
+    Address the backend listens on. Default 0.0.0.0, which accepts connections
+    from other machines on the same network. Use 127.0.0.1 to restrict access
+    to this machine only.
+
 .PARAMETER NoSync
     Skip 'uv sync'. Use for fast restarts when dependencies haven't changed.
 
@@ -22,10 +27,14 @@
     .\start.ps1
 .EXAMPLE
     .\start.ps1 -Port 8080 -NoSync
+.EXAMPLE
+    # Local-only, not reachable from the network
+    .\start.ps1 -BindHost 127.0.0.1
 #>
 [CmdletBinding()]
 param(
     [int]$Port = 9897,
+    [string]$BindHost = '0.0.0.0',
     [switch]$NoSync,
     [switch]$NoBrowser
 )
@@ -153,7 +162,32 @@ if ($portBusy) {
 Write-Ok "Port $Port is free"
 
 # ── 6. Browser opener (background) ──────────────────────────
+# Always open the local URL -- 0.0.0.0 is a bind address, not something a
+# browser can navigate to.
 $appUrl = "http://localhost:$Port"
+
+# When listening on all interfaces, work out the addresses other machines use.
+# The interface name is shown alongside each one because this box also has
+# virtual adapters (WSL/Hyper-V switches, Tailscale) whose addresses are not
+# the LAN address colleagues need.
+$lanUrls = @()
+if ($BindHost -eq '0.0.0.0') {
+    $lanUrls = @(
+        Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.IPAddress -ne '127.0.0.1' -and
+                $_.PrefixOrigin -in @('Dhcp', 'Manual') -and
+                $_.IPAddress -notlike '169.254.*'
+            } |
+            Sort-Object IPAddress -Unique |
+            ForEach-Object {
+                [PSCustomObject]@{
+                    Url       = "http://$($_.IPAddress):$Port"
+                    Interface = $_.InterfaceAlias
+                }
+            }
+    )
+}
 
 if (-not $NoBrowser) {
     Start-Job -Name 'simexai-browser' -ScriptBlock {
@@ -176,11 +210,26 @@ if (-not $NoBrowser) {
 
 # ── 7. Launch ───────────────────────────────────────────────
 Write-Step "Starting SimEx AI on $appUrl"
+if ($BindHost -eq '0.0.0.0') {
+    if ($lanUrls) {
+        Write-Ok "Reachable from other machines at:"
+        $pad = ($lanUrls | ForEach-Object { $_.Url.Length } | Measure-Object -Maximum).Maximum
+        foreach ($u in $lanUrls) {
+            Write-Host ("      {0}  " -f $u.Url.PadRight($pad)) -ForegroundColor Green -NoNewline
+            Write-Host "($($u.Interface))" -ForegroundColor DarkGray
+        }
+    } else {
+        Write-Warn "Listening on all interfaces, but no network address was found."
+    }
+    Write-Warn "Windows Firewall may prompt to allow access -- choose the private network."
+} else {
+    Write-Ok "Bound to $BindHost (this machine only)"
+}
 Write-Host "    Press Ctrl+C to stop." -ForegroundColor DarkGray
 Write-Host ""
 
 try {
-    & uv run uvicorn backend.app:app --reload --port $Port
+    & uv run uvicorn backend.app:app --reload --host $BindHost --port $Port
 } finally {
     # Clean up the browser job whether we exited normally or via Ctrl+C.
     Get-Job -Name 'simexai-browser' -ErrorAction SilentlyContinue |
