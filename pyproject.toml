@@ -20,7 +20,13 @@ dependencies = [
     "kokoro>=0.9.4",
     "soundfile>=0.14.0",
     "numpy>=2.5.0",
+    # Kokoro's g2p layer (misaki) needs this spaCy model and will otherwise try
+    # to download it mid-request. Vendored so `uv sync` works offline.
+    "en-core-web-sm",
 ]
+
+[tool.uv.sources]
+en-core-web-sm = { path = "vendor/en_core_web_sm-3.8.0-py3-none-any.whl" }
 
 [dependency-groups]
 dev = [
