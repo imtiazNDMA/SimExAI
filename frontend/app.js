@@ -931,6 +931,29 @@ function initSTT() {
     return;
   }
 
+  // Microphone access requires a secure context. Browsers special-case
+  // localhost, so this only bites when the app is served over plain HTTP from
+  // a LAN address — exactly how participants reach it during an exercise.
+  // SpeechRecognition still *exists* on an insecure origin, so checking it
+  // alone leaves a mic button that renders and then silently does nothing.
+  if (!window.isSecureContext || !navigator.mediaDevices) {
+    console.warn(
+      `Microphone disabled: ${location.origin} is not a secure context. ` +
+      'Serve the app over HTTPS (or via localhost) to enable voice input.'
+    );
+    if (btnMic) {
+      // aria-disabled rather than the disabled attribute: a disabled button
+      // fires no click event, and the explanation below is the whole point.
+      btnMic.setAttribute('aria-disabled', 'true');
+      btnMic.classList.add('unavailable');
+      btnMic.title = 'Voice input needs HTTPS — this page is served over plain HTTP';
+      btnMic.addEventListener('click', () => showToast(
+        'Voice input requires a secure (HTTPS) connection. Type your response instead.'
+      ));
+    }
+    return;
+  }
+
   sttRecognition = new SpeechRecognition();
   sttRecognition.continuous = false;
   sttRecognition.interimResults = true;
