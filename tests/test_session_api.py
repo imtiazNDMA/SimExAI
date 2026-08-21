@@ -1,4 +1,4 @@
-"""Session and controller authorization behavior at the HTTP boundary."""
+"""Uniform session access and persistence behavior at the HTTP boundary."""
 import pytest
 from fastapi.testclient import TestClient
 
@@ -18,42 +18,29 @@ def bootstrap(client: TestClient, session_id: str):
     return client.post("/api/session", headers=session_headers(session_id))
 
 
-def test_sessions_share_exercise_phase_and_only_controller_can_change_it(client: TestClient):
-    controller = bootstrap(client, CONTROLLER_ID)
-    participant = bootstrap(client, PARTICIPANT_ID)
+def test_sessions_share_exercise_phase_and_have_uniform_control(client: TestClient):
+    first_session = bootstrap(client, CONTROLLER_ID)
+    second_session = bootstrap(client, PARTICIPANT_ID)
 
-    assert controller.status_code == 200
-    assert controller.json()["role"] == "controller"
-    assert participant.status_code == 200
-    assert participant.json()["role"] == "participant"
-    assert participant.json()["exercise_id"] == controller.json()["exercise_id"]
+    assert first_session.status_code == 200
+    assert first_session.json()["role"] == "controller"
+    assert second_session.status_code == 200
+    assert second_session.json()["role"] == "controller"
+    assert second_session.json()["exercise_id"] == first_session.json()["exercise_id"]
 
     database.save_scenario({"id": "scenario-1", "name": "Persistent scenario"})
     database.update_exercise(
-        controller.json()["exercise_id"],
+        first_session.json()["exercise_id"],
         scenario_id="scenario-1",
         injects_id="scenario-1-injects",
     )
 
-    forbidden_routes = ("/api/phase/advance", "/api/phase/back", "/api/phase/reset")
-    for route in forbidden_routes:
-        response = client.post(route, headers=session_headers(PARTICIPANT_ID))
-        assert response.status_code == 403
-
-    upload = client.post(
-        "/api/scenario/upload",
-        headers=session_headers(PARTICIPANT_ID),
-        files={"file": ("scenario.txt", b"test scenario")},
-    )
-    assert upload.status_code == 403
-    assert app_module._upload_jobs == {}
-
-    advanced = client.post("/api/phase/advance", headers=session_headers(CONTROLLER_ID))
+    advanced = client.post("/api/phase/advance", headers=session_headers(PARTICIPANT_ID))
     assert advanced.status_code == 200
     assert advanced.json()["current_phase"]["id"] == "d_minus_30"
 
-    participant_view = client.get("/api/phases", headers=session_headers(PARTICIPANT_ID))
-    active_phase = next(phase for phase in participant_view.json()["phases"] if phase["is_active"])
+    first_view = client.get("/api/phases", headers=session_headers(CONTROLLER_ID))
+    active_phase = next(phase for phase in first_view.json()["phases"] if phase["is_active"])
     assert active_phase["id"] == "d_minus_30"
 
     reset = client.post("/api/phase/reset", headers=session_headers(CONTROLLER_ID))
@@ -133,7 +120,7 @@ def test_chat_uses_server_authoritative_phase(client: TestClient, monkeypatch: p
     assert observed["phase_id"] == "d_minus_90"
 
 
-def test_participant_is_bound_to_first_wing(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+def test_every_session_can_switch_wings(client: TestClient, monkeypatch: pytest.MonkeyPatch):
     class FakeResponder:
         KNOWN_WINGS = {"operations_logistic", "plans"}
 
@@ -178,9 +165,9 @@ def test_participant_is_bound_to_first_wing(client: TestClient, monkeypatch: pyt
 
     assert bogus.status_code == 400
     assert first_wing.status_code == 200
-    assert other_wing.status_code == 403
-    assert other_actions.status_code == 403
-    assert bootstrap(client, PARTICIPANT_ID).json()["wing_id"] == "operations_logistic"
+    assert other_wing.status_code == 200
+    assert other_actions.status_code == 200
+    assert bootstrap(client, PARTICIPANT_ID).json()["wing_id"] == "plans"
 
 
 def test_inactive_session_is_replaced_by_a_new_controller(client: TestClient):
@@ -197,24 +184,24 @@ def test_inactive_session_is_replaced_by_a_new_controller(client: TestClient):
 
 
 def test_upload_jobs_are_visible_only_to_the_owner(client: TestClient):
-    controller = bootstrap(client, CONTROLLER_ID).json()
+    first_session = bootstrap(client, CONTROLLER_ID).json()
     bootstrap(client, PARTICIPANT_ID)
     app_module._upload_jobs["private-job"] = {
         "job_id": "private-job",
         "session_id": CONTROLLER_ID,
-        "exercise_id": controller["exercise_id"],
+        "exercise_id": first_session["exercise_id"],
         "started_at": 0,
         "updated_at": 0,
     }
 
-    participant = client.get(
+    other_session = client.get(
         "/api/scenario/upload/private-job", headers=session_headers(PARTICIPANT_ID)
     )
     owner = client.get(
         "/api/scenario/upload/private-job", headers=session_headers(CONTROLLER_ID)
     )
 
-    assert participant.status_code == 404
+    assert other_session.status_code == 404
     assert owner.status_code == 200
     assert "session_id" not in owner.json()
     assert "exercise_id" not in owner.json()

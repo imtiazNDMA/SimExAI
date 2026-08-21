@@ -90,15 +90,15 @@ def init_db():
             )
         """)
 
-        # One participant taking part in an exercise, as a given wing.
-        # The first session on an exercise claims role='controller'.
+        # One browser taking part in an exercise, optionally focused on a wing.
+        # This trusted-LAN deployment gives every active session full control.
         conn.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
                 id TEXT PRIMARY KEY,
                 exercise_id TEXT NOT NULL,
                 wing_id TEXT,
                 participant_label TEXT,
-                role TEXT NOT NULL DEFAULT 'participant',
+                role TEXT NOT NULL DEFAULT 'controller',
                 status TEXT NOT NULL DEFAULT 'active',
                 created_at TEXT NOT NULL,
                 last_seen_at TEXT NOT NULL,
@@ -163,9 +163,8 @@ def init_db():
 def _migrate():
     """Bring an existing database up to the current schema.
 
-    Additive only — no data is dropped or rewritten. Databases created before
-    the sessions work predate `injects.status`, which `_normalize_injects` has
-    always set and the schema silently discarded.
+    Databases created before the sessions work predate `injects.status`, which
+    `_normalize_injects` has always set and the schema silently discarded.
     """
     with get_connection() as conn:
         # WAL survives in the file; it lets reads proceed during a write, which
@@ -179,6 +178,13 @@ def _migrate():
         existing_messages = {row["name"] for row in conn.execute("PRAGMA table_info(messages)")}
         if existing_messages and "wing_id" not in existing_messages:
             conn.execute("ALTER TABLE messages ADD COLUMN wing_id TEXT")
+
+        # localhost, loopback, and LAN IPs are separate browser origins. Keep
+        # their UI and permissions identical in this trusted-LAN deployment.
+        conn.execute(
+            "UPDATE sessions SET role = 'controller'"
+            " WHERE status = 'active' AND role != 'controller'"
+        )
 
 
 # ── Exercises ───────────────────────────────────────────────
@@ -260,18 +266,14 @@ def create_session(
     wing_id: Optional[str] = None,
     participant_label: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Create a participant session. The first session on an exercise controls it."""
+    """Create a full-access session for the trusted LAN deployment."""
     session_id = uuid.uuid4().hex
     now = _now()
     with get_connection() as conn:
-        existing = conn.execute(
-            "SELECT COUNT(*) FROM sessions WHERE exercise_id = ?", (exercise_id,)
-        ).fetchone()[0]
-        role = "controller" if existing == 0 else "participant"
         conn.execute(
             "INSERT INTO sessions (id, exercise_id, wing_id, participant_label, role,"
             " status, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?, 'active', ?, ?)",
-            (session_id, exercise_id, wing_id, participant_label, role, now, now),
+            (session_id, exercise_id, wing_id, participant_label, "controller", now, now),
         )
     return load_session(session_id)
 
@@ -280,14 +282,18 @@ def ensure_session(session_id: str) -> Dict[str, Any]:
     """Return a browser session, atomically creating it on the active exercise."""
     now = _now()
     with get_connection() as conn:
-        # Serialize bootstrap so concurrent first visitors cannot both become controller.
+        # Serialize bootstrap so concurrent visitors share one active exercise.
         conn.execute("BEGIN IMMEDIATE")
         row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
         if row:
             conn.execute(
-                "UPDATE sessions SET last_seen_at = ? WHERE id = ?", (now, session_id)
+                "UPDATE sessions SET role = 'controller', last_seen_at = ? WHERE id = ?",
+                (now, session_id),
             )
-            return dict(row)
+            session = dict(row)
+            session["role"] = "controller"
+            session["last_seen_at"] = now
+            return session
 
         exercise = conn.execute(
             "SELECT * FROM exercises WHERE status = 'active' ORDER BY created_at DESC LIMIT 1"
@@ -302,16 +308,10 @@ def ensure_session(session_id: str) -> Dict[str, Any]:
         else:
             exercise_id = exercise["id"]
 
-        has_controller = conn.execute(
-            "SELECT 1 FROM sessions WHERE exercise_id = ? AND status = 'active'"
-            " AND role = 'controller' LIMIT 1",
-            (exercise_id,),
-        ).fetchone()
-        role = "participant" if has_controller else "controller"
         conn.execute(
             "INSERT INTO sessions (id, exercise_id, role, status, created_at, last_seen_at)"
-            " VALUES (?, ?, ?, 'active', ?, ?)",
-            (session_id, exercise_id, role, now, now),
+            " VALUES (?, ?, 'controller', 'active', ?, ?)",
+            (session_id, exercise_id, now, now),
         )
         row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
     return dict(row)
