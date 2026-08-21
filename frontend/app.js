@@ -71,6 +71,7 @@ const wingCount       = $('#wing-count');
 const themeToggle     = $('#theme-toggle');
 
 const THEME_KEY = 'simexai-theme';
+const TTS_AUTOPLAY_KEY = 'simexai-tts-autoplay';
 
 // ── API ────────────────────────────────────────
 async function api(path, options = {}) {
@@ -1002,7 +1003,7 @@ let ttsActiveBtn = null;
 let ttsActiveBubbleIdx = null;
 
 async function ttsAutoPlay(text) {
-  if (!text) return;
+  if (!text || localStorage.getItem(TTS_AUTOPLAY_KEY) !== 'true') return;
   // Find the last system message index
   const wingId = state.activeWing?.id;
   if (!wingId || !state.messages[wingId]) return;

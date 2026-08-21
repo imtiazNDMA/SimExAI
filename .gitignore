@@ -21,3 +21,6 @@ data/simex.db
 !.env.example
 .agents/
 .vscode/
+
+# Local throwaway probes
+.tmp_*

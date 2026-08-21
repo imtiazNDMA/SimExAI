@@ -93,6 +93,9 @@ class LLMEngine:
         self.api_key = os.getenv("LMSTUDIO_API_KEY", "lm-studio")  # LM Studio ignores the value
         self.timeout_seconds = timeout_seconds or int(os.getenv("LMSTUDIO_TIMEOUT_SECONDS", "180"))
         self.upload_timeout_seconds = int(os.getenv("LMSTUDIO_UPLOAD_TIMEOUT_SECONDS", "600"))
+        self.rewrite_enabled = os.getenv(
+            "LMSTUDIO_REWRITE_ENABLED", "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
         self.rewrite_timeout_seconds = int(os.getenv("LMSTUDIO_REWRITE_TIMEOUT_SECONDS", "60"))
         self.temperature = float(os.getenv("LMSTUDIO_TEMPERATURE", "0.45"))
         self.top_p = float(os.getenv("LMSTUDIO_TOP_P", "0.9"))
@@ -103,11 +106,15 @@ class LLMEngine:
         self.upload_max_tokens = int(os.getenv("LMSTUDIO_UPLOAD_MAX_TOKENS", "16000"))
         self.rewrite_max_tokens = int(os.getenv("LMSTUDIO_REWRITE_MAX_TOKENS", "2500"))
         self.llm = self._build_llm(self.timeout_seconds)
-        self.rewrite_llm = self._build_llm(
-            self.rewrite_timeout_seconds,
-            temperature=0.2,
-            max_tokens=self.rewrite_max_tokens,
-            max_retries=0,
+        self.rewrite_llm = (
+            self._build_llm(
+                self.rewrite_timeout_seconds,
+                temperature=0.2,
+                max_tokens=self.rewrite_max_tokens,
+                max_retries=0,
+            )
+            if self.rewrite_enabled
+            else None
         )
         self.upload_llm = self._build_llm(
             self.upload_timeout_seconds,
@@ -649,6 +656,10 @@ Respond now in natural prose. Stay within the evidence above and do not introduc
     ) -> str:
         supported_concepts = ", ".join(sorted(self._technical_concepts(grounding_text)))
         supported_concepts = supported_concepts or "none"
+        if self.rewrite_llm is None:
+            return self._safe_response_fallback(
+                draft, user_message, grounding_text, history
+            )
         revision_request = HumanMessage(content=f"""Rewrite the moderator draft below before it is shown.
 
 Participant message:

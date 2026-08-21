@@ -14,6 +14,12 @@ def build_responder() -> LLMEngine:
     return LLMEngine(scenario)
 
 
+def test_quality_rewrite_is_disabled_by_default(monkeypatch):
+    monkeypatch.delenv("LMSTUDIO_REWRITE_ENABLED", raising=False)
+    responder = build_responder()
+    assert responder.rewrite_llm is None
+
+
 def test_prompt_has_one_mandate_copy_and_natural_conversation_rules():
     responder = build_responder()
     wing_id = "operations_logistic"
