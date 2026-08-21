@@ -24,3 +24,9 @@ data/simex.db
 
 # Local throwaway probes
 .tmp_*
+
+# Generated probe fixtures (regenerate: scripts/make_stt_fixtures.py)
+scratch/
+
+# Playwright MCP session artifacts
+.playwright-mcp/

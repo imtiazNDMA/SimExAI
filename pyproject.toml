@@ -25,6 +25,17 @@ dependencies = [
     "en-core-web-sm",
 ]
 
+[project.optional-dependencies]
+# Voice pipeline (ARCHITECTURE.md). Not required by the text UI, so kept out of
+# the default install -- but `uv sync` WITHOUT this extra will uninstall them.
+# Install with:  uv sync --extra voice
+voice = [
+    "faster-whisper>=1.2.1",
+    # ctranslate2 links against CUDA 12 and bundles cuDNN but not cuBLAS.
+    # Required for GPU STT, which ARCHITECTURE.md 1.7 shows is mandatory.
+    "nvidia-cublas-cu12>=12.9",
+]
+
 [tool.uv.sources]
 en-core-web-sm = { path = "vendor/en_core_web_sm-3.8.0-py3-none-any.whl" }
 
