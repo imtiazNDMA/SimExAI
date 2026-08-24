@@ -22,7 +22,7 @@ Participants then select their NDMA Wing and chat with the AI. The AI evaluates 
 ```
 backend/
 ├── app.py               # FastAPI server, API routes, Upload Pipeline
-├── ollama_engine.py     # Langchain ChatOllama integration & Invigilator prompt
+├── llm_engine.py        # LangChain ChatOpenAI -> LM Studio & Invigilator prompt
 ├── document_parser.py   # PDF/DOCX text and Vision extraction
 ├── database.py          # SQLite database connection & CRUD operations
 └── pinecone_engine.py   # Pure Pinecone Vector Search integration
@@ -46,17 +46,89 @@ D-90 → D-30 → D-Day → D+30 → D+90
 - `uv` package manager
 - Copy `.env.example` to `.env` and configure your API keys and settings:
   - Pinecone API Key (`PINECONE_API_KEY`)
-  - Ollama running locally (Default: `http://localhost:11434` with model `qwen3.6:35b`)
+  - LM Studio running locally with an OpenAI-compatible server
+    (Default: `http://localhost:1234/v1`, model `google/gemma-4-26b-a4b`).
+    Start it from LM Studio's Developer / Local Server tab and load the model.
 
 ### Installation & Run
+
+**One command (Windows):**
+
+```bat
+start.bat
+```
+
+This checks prerequisites, creates `.env` from `.env.example` if missing, runs `uv sync`,
+verifies the configured LLM server is reachable, starts the backend, and opens
+http://localhost:9897 once it responds.
+
+The backend listens on `0.0.0.0` by default, so **other machines on the same network
+can reach it** at `http://<this-machine-ip>:9897`. On startup the script prints every
+usable address with its interface name, so you can tell the LAN address apart from
+virtual adapters (WSL/Hyper-V, VPNs). Windows Firewall may prompt on first run --
+allow access on the private network.
+
+Options (passed through to `start.ps1`):
+
+| Flag | Effect |
+| --- | --- |
+| `-Port 8080` | Run on a different port (default 9897) |
+| `-BindHost 127.0.0.1` | Listen on this machine only (default `0.0.0.0`, i.e. network-accessible) |
+| `-NoSync` | Skip `uv sync` for fast restarts |
+| `-NoBrowser` | Don't open the browser |
+| `-Https` | Serve trusted HTTPS for microphone access on LAN clients |
+| `-SslCertFile <path>` | Use an organization-issued PEM certificate (enables HTTPS) |
+| `-SslKeyFile <path>` | Use the matching PEM private key |
+
+### HTTPS and voice input
+
+Browsers permit microphone capture on HTTPS origins and on the special
+`http://localhost` exception. Participants opening `http://<LAN-IP>:9897` cannot use
+voice input. Configure HTTPS once on the server:
+
+```powershell
+.\scripts\setup_https.ps1 -TrustLocal
+start.bat -Https
+```
+
+The setup script creates a local CA and a server certificate containing `localhost`
+and the server's current LAN IPv4 addresses. On every participant machine, copy only
+`.certs\simexai-ca.cert.pem` and trust it for that user:
+
+```powershell
+certutil -user -addstore Root .\simexai-ca.cert.pem
+```
+
+Participants must then use one of the `https://<LAN-IP>:9897` addresses printed by
+the launcher. Regenerate the certificate with `-Force` if the server's DHCP address
+changes. Never distribute `simexai-ca.key.pem` or `simexai-server.key.pem`.
+
+For managed NDMA deployments, prefer an internal DNS name and an organization-issued
+certificate whose CA is already trusted on participant machines:
+
+```powershell
+start.bat -SslCertFile C:\certs\simexai.pem -SslKeyFile C:\certs\simexai-key.pem
+```
+
+**Manual:**
 
 ```bash
 # Install dependencies
 uv sync
 
-# Start backend server
-uv run uvicorn backend.app:app --reload
+# Start backend server (0.0.0.0 = reachable from other machines on the network)
+uv run uvicorn backend.app:app --reload --host 0.0.0.0 --port 9897
 
 # Access the application
-# Open http://localhost:8000 in your browser
+# On this machine:    http://localhost:9897
+# From another machine: http://<this-machine-ip>:9897
+```
+
+## Testing
+
+Install the Chromium runtime once, then run the complete suite:
+
+```bash
+uv run playwright install chromium
+uv run pytest -q
 ```

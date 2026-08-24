@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SimexAI — NDMA Simulation Exercise</title>
   <meta name="description" content="AI-powered simulation exercise platform for NDMA Pakistan disaster response training">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -49,7 +50,7 @@
       </div>
 
       <div class="header-right">
-        <input id="scenario-file-input" type="file" accept=".pdf,.docx,.txt" hidden>
+        <input id="scenario-file-input" type="file" accept=".pdf,.docx,.doc,.txt" hidden>
         <button id="btn-upload-scenario" class="ctrl-btn" title="Upload Scenario">
           Upload Scenario
         </button>
@@ -109,10 +110,16 @@
             <span class="chat-phase-tag" id="chat-phase-label">—</span>
           </div>
         </div>
-        <button class="topbar-action-btn" id="btn-show-actions" title="Wing Actions" disabled>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>
-          Actions
-        </button>
+        <div class="topbar-actions">
+          <button class="topbar-action-btn destructive" id="btn-clear-chat" title="Clear chat history" aria-label="Clear chat history" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
+            <span class="button-label">Clear chat</span>
+          </button>
+          <button class="topbar-action-btn" id="btn-show-actions" title="Wing Actions" disabled>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>
+            <span class="button-label">Actions</span>
+          </button>
+        </div>
       </div>
 
       <!-- Messages -->
@@ -203,6 +210,50 @@
   </div>
 
 </div>
+
+<!-- Scenario ingestion progress -->
+<div id="upload-overlay" class="upload-overlay" role="dialog" aria-modal="true"
+     aria-labelledby="ul-title" aria-describedby="ul-message" hidden>
+  <div class="upload-card">
+
+    <!-- Signature: the pages light up as the model actually reads them -->
+    <div class="upload-visual">
+      <svg class="upload-ring" viewBox="0 0 132 132" aria-hidden="true">
+        <circle class="ring-track" cx="66" cy="66" r="60" />
+        <circle class="ring-fill" cx="66" cy="66" r="60" />
+      </svg>
+      <div class="upload-doc" aria-hidden="true">
+        <span class="doc-page"></span>
+        <span class="doc-page"></span>
+        <span class="doc-page"></span>
+        <span class="doc-scan"></span>
+        <span class="doc-kind" id="ul-kind">PDF</span>
+      </div>
+    </div>
+
+    <h2 class="upload-title" id="ul-title">Ingesting scenario</h2>
+    <p class="upload-file"><span id="ul-filename">document</span><span id="ul-pages"></span></p>
+
+    <p class="upload-message" id="ul-message" role="status" aria-live="polite">Preparing upload</p>
+
+    <ul class="upload-stages" id="ul-stages">
+      <li data-stage="parsing"><i></i>Reading document</li>
+      <li data-stage="rendering"><i></i>Rendering pages</li>
+      <li data-stage="analysing"><i></i>Analysing content</li>
+      <li data-stage="indexing"><i></i>Indexing for retrieval</li>
+    </ul>
+
+    <p class="upload-hint" id="ul-hint">
+      Keep this tab open. Long documents are read section by section and can take several minutes.
+    </p>
+
+    <div class="upload-foot">
+      <span class="upload-elapsed" id="ul-elapsed">0:00</span>
+      <button class="upload-btn" id="ul-dismiss" hidden>Close</button>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>

@@ -16,10 +16,15 @@ PHASES = [
 class ScenarioEngine:
     """State machine for managing SimEx exercise progression."""
 
-    def __init__(self, scenario_id: str = None, injects_id: str = None):
+    def __init__(
+        self,
+        scenario_id: str = None,
+        injects_id: str = None,
+        current_phase_index: int = 0,
+    ):
         self.scenario_id = scenario_id
         self.injects_id = injects_id
-        self.current_phase_index = 0
+        self.current_phase_index = max(0, min(current_phase_index, len(PHASES) - 1))
         self.scenario_data = self._load_scenario()
         self.injects_data = self._load_injects()
 
@@ -87,11 +92,27 @@ class ScenarioEngine:
     def reset_to_default(self):
         self.load_scenario(None, None)
 
-    def get_injects_for_phase(self, phase_id: str) -> list[dict]:
+    def get_injects_for_phase(
+        self, phase_id: str, wing_id: str | None = None
+    ) -> list[dict]:
+        """Return phase injects visible to a wing.
+
+        Untargeted injects remain global so existing scenarios without wing
+        metadata continue to work.
+        """
         return [
             inject for inject in self.injects_data.get("injects", [])
             if inject["phase_id"] == phase_id
+            and (
+                not (inject.get("required_wings") or inject.get("target_wings"))
+                or (
+                    wing_id is not None
+                    and wing_id in (
+                        inject.get("required_wings") or inject.get("target_wings")
+                    )
+                )
+            )
         ]
 
-    def get_current_injects(self) -> list[dict]:
-        return self.get_injects_for_phase(self.get_current_phase()["id"])
+    def get_current_injects(self, wing_id: str | None = None) -> list[dict]:
+        return self.get_injects_for_phase(self.get_current_phase()["id"], wing_id)

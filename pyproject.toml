@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
-    "langchain-ollama>=1.0.0",
+    "langchain-openai>=0.2.0",
     "uvicorn[standard]>=0.34.0",
     "pydantic>=2.0.0",
     "python-multipart>=0.0.27",
@@ -20,4 +20,34 @@ dependencies = [
     "kokoro>=0.9.4",
     "soundfile>=0.14.0",
     "numpy>=2.5.0",
+    # Kokoro's g2p layer (misaki) needs this spaCy model and will otherwise try
+    # to download it mid-request. Vendored so `uv sync` works offline.
+    "en-core-web-sm",
 ]
+
+[project.optional-dependencies]
+# Voice pipeline (ARCHITECTURE.md). Not required by the text UI, so kept out of
+# the default install -- but `uv sync` WITHOUT this extra will uninstall them.
+# Install with:  uv sync --extra voice
+voice = [
+    "faster-whisper>=1.2.1",
+    # ctranslate2 links against CUDA 12 and bundles cuDNN but not cuBLAS.
+    # Required for GPU STT, which ARCHITECTURE.md 1.7 shows is mandatory.
+    "nvidia-cublas-cu12>=12.9",
+]
+
+[tool.uv.sources]
+en-core-web-sm = { path = "vendor/en_core_web_sm-3.8.0-py3-none-any.whl" }
+
+[dependency-groups]
+dev = [
+    "playwright>=1.55.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# Keep the default asyncio mode strict; async tests opt in with the marker.
+asyncio_mode = "strict"

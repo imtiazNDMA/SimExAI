@@ -2,7 +2,23 @@
    SimexAI — Application Logic
    ═══════════════════════════════════════════════ */
 
-const API_BASE = 'http://localhost:8000/api';
+// Origin-relative: the backend serves this page, so the API is always on the
+// same host and port. Hardcoding a port breaks `start.bat -Port <n>`.
+const API_BASE = '/api';
+const SESSION_KEY = 'simexai-session-id';
+let sessionId = localStorage.getItem(SESSION_KEY);
+function createSessionId() {
+  return typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : crypto.getRandomValues(new Uint8Array(16)).reduce(
+      (value, byte) => value + byte.toString(16).padStart(2, '0'),
+      '',
+    );
+}
+if (!sessionId) {
+  sessionId = createSessionId();
+  localStorage.setItem(SESSION_KEY, sessionId);
+}
 
 // ── State ──────────────────────────────────────
 const state = {
@@ -12,7 +28,13 @@ const state = {
   currentPhase: null,
   injects:     [],
   messages:    {},  // { wingId: [{ type, text, wingName, time }] }
+  clearedWings: new Set(),
+  chatRequestVersions: {},
+  phaseBriefingVersions: {},
+  session:     null,
 };
+let injectRequestVersion = 0;
+let phaseControlPending = false;
 
 // ── DOM ────────────────────────────────────────
 const $  = (sel) => document.querySelector(sel);
@@ -33,6 +55,7 @@ const btnBack         = $('#btn-back-phase');
 const btnReset        = $('#btn-reset');
 const btnUploadScenario = $('#btn-upload-scenario');
 const fileInputScenario = $('#scenario-file-input');
+const btnClearChat    = $('#btn-clear-chat');
 const btnShowActions  = $('#btn-show-actions');
 const actionsModal    = $('#actions-modal');
 const actionsList     = $('#actions-list');
@@ -53,13 +76,19 @@ const wingCount       = $('#wing-count');
 const themeToggle     = $('#theme-toggle');
 
 const THEME_KEY = 'simexai-theme';
+const TTS_AUTOPLAY_KEY = 'simexai-tts-autoplay';
 
 // ── API ────────────────────────────────────────
 async function api(path, options = {}) {
   try {
+    const headers = {
+      'X-Session-Id': sessionId,
+      ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {}),
+    };
     const res = await fetch(`${API_BASE}${path}`, {
-      headers: { 'Content-Type': 'application/json' },
       ...options,
+      headers,
     });
     if (!res.ok) throw new Error(`API ${res.status}`);
     return res.json();
@@ -69,9 +98,38 @@ async function api(path, options = {}) {
   }
 }
 
+async function bootstrapSession() {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const res = await fetch(`${API_BASE}/session`, {
+        method: 'POST',
+        headers: { 'X-Session-Id': sessionId },
+      });
+      if (res.status === 409 && attempt === 0) {
+        sessionId = createSessionId();
+        localStorage.setItem(SESSION_KEY, sessionId);
+        continue;
+      }
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.error('Session bootstrap error:', err);
+      return null;
+    }
+  }
+  return null;
+}
+
 // ── Init ───────────────────────────────────────
 async function init() {
   initTheme();
+
+  state.session = await bootstrapSession();
+  if (!state.session) {
+    console.error('Session bootstrap failed; the app cannot start without a session.');
+    return;
+  }
+  updateControllerControls();
 
   const [wingsData, phasesData, scenarioData] = await Promise.all([
     api('/wings'),
@@ -97,6 +155,39 @@ async function init() {
     updateButtonStates();
   }
   await loadInjects();
+  await loadTranscript();
+  window.setInterval(syncSharedPhase, 5000);
+}
+
+async function loadTranscript() {
+  const data = await api('/session/messages');
+  if (!data?.messages) return;
+  state.clearedWings = new Set(data.cleared_wings || []);
+  const wingNameOf = wingId =>
+    state.wings.find(wing => wing.id === wingId)?.name || 'Moderator';
+  data.messages.forEach(message => {
+    const wingId = message.wing_id;
+    if (!wingId) return;
+    if (!state.messages[wingId]) state.messages[wingId] = [];
+    state.messages[wingId].push({
+      type: message.role === 'user' ? 'user' : 'system',
+      text: message.content,
+      kind: message.kind || 'general_chat',
+      wingName: message.role === 'assistant' ? wingNameOf(wingId) : '',
+      time: new Date(message.created_at).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    });
+  });
+  updateClearChatButton();
+}
+
+function updateControllerControls() {
+  const isController = state.session?.role === 'controller';
+  [btnAdvance, btnBack, btnReset, btnUploadScenario].forEach(button => {
+    if (button) button.hidden = !isController;
+  });
 }
 
 function updateHeader() {
@@ -343,7 +434,10 @@ function toDisplayCase(value) {
 
 // ── Wings ──────────────────────────────────────
 function renderWings() {
-  wingList.innerHTML = state.wings.map(w => `
+  const visibleWings = state.session?.role === 'participant' && state.session.wing_id
+    ? state.wings.filter(wing => wing.id === state.session.wing_id)
+    : state.wings;
+  wingList.innerHTML = visibleWings.map(w => `
     <div class="wing-item" data-wing-id="${w.id}" tabindex="0" role="button"
          aria-label="${w.name}">
       <span class="wing-item-icon">${w.icon}</span>
@@ -367,8 +461,20 @@ function renderWings() {
 }
 
 function selectWing(wingId) {
+  if (
+    state.session?.role === 'participant'
+    && state.session.wing_id
+    && state.session.wing_id !== wingId
+  ) {
+    showToast('This session is assigned to another wing');
+    return;
+  }
   state.activeWing = state.wings.find(w => w.id === wingId);
   if (!state.activeWing) return;
+  if (state.session?.role === 'participant' && !state.session.wing_id) {
+    state.session.wing_id = wingId;
+    renderWings();
+  }
 
   wingList.querySelectorAll('.wing-item').forEach(el => {
     el.classList.toggle('active', el.dataset.wingId === wingId);
@@ -378,32 +484,40 @@ function selectWing(wingId) {
   chatWingName.textContent = state.activeWing.name;
   chatPhaseLabel.textContent = state.currentPhase ? state.currentPhase.label : '—';
 
-  chatInput.disabled = false;
-  btnSend.disabled = false;
-  if (btnMic) btnMic.disabled = false;
+  const chatIsClearing = clearingChatWingId === wingId;
+  chatInput.disabled = chatIsClearing;
+  btnSend.disabled = chatIsClearing;
+  if (btnMic) btnMic.disabled = chatIsClearing;
   btnShowActions.disabled = false;
   chatInput.focus();
 
   renderMessages();
+  loadInjects(wingId);
+  updateClearChatButton();
 
-  if (!state.messages[wingId] || state.messages[wingId].length === 0) {
+  if (
+    (!state.messages[wingId] || state.messages[wingId].length === 0)
+    && !state.clearedWings.has(wingId)
+  ) {
     sendGreeting(wingId);
   }
 }
 
-async function sendGreeting(wingId, isPhaseChange = false) {
-  const phaseId = state.currentPhase ? state.currentPhase.id : 'd_minus_90';
+async function sendGreeting(wingId) {
+  const requestVersion = state.chatRequestVersions[wingId] || 0;
   showTypingIndicator();
-  
-  let msgText = isPhaseChange
-    ? `Phase advancement notice: ${state.currentPhase?.label || phaseId}. Brief me on the new phase priorities based on the scenario records. Do not welcome me, do not acknowledge my presence or role again, and do not repeat the exercise title.`
-    : 'hello';
+
+  const msgText = 'hello';
+
+  addMessage(wingId, 'user', msgText);
 
   const data = await api('/chat', {
     method: 'POST',
-    body: JSON.stringify({ wing_id: wingId, phase_id: phaseId, message: msgText }),
+    body: JSON.stringify({ wing_id: wingId, message: msgText }),
   });
+  if ((state.chatRequestVersions[wingId] || 0) !== requestVersion) return;
   hideTypingIndicator();
+  if (handleDiscardedChatResponse(wingId, data)) return;
   if (data) {
     addMessage(wingId, 'system', data.response, data.wing_name);
     ttsAutoPlay(data.response);
@@ -411,14 +525,15 @@ async function sendGreeting(wingId, isPhaseChange = false) {
 }
 
 // ── Chat ───────────────────────────────────────
-function addMessage(wingId, type, text, wingName = '') {
+function addMessage(wingId, type, text, wingName = '', kind = 'general_chat') {
   if (!state.messages[wingId]) state.messages[wingId] = [];
   const now = new Date();
   state.messages[wingId].push({
-    type, text, wingName,
+    type, text, wingName, kind,
     time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
   });
   if (state.activeWing && state.activeWing.id === wingId) renderMessages();
+  updateClearChatButton();
 }
 
 function renderMessages() {
@@ -488,7 +603,9 @@ function buildWelcomeHTML() {
         <h1 class="welcome-title">SimexAI</h1>
         <p class="welcome-sub">AI-powered disaster simulation platform<br>for NDMA Pakistan</p>
         ${scenarioGrid}
-        <p class="welcome-cta" style="margin-top: 30px;">← Select a wing from the sidebar to begin</p>
+        <p class="welcome-cta" style="margin-top: 30px;">${state.activeWing
+          ? 'Type a message below to begin a new conversation.'
+          : '← Select a wing from the sidebar to begin'}</p>
       </div>
     </div>`;
 }
@@ -532,10 +649,96 @@ function showTypingIndicator() {
   }
   chatMessages.appendChild(typingEl);
   chatMessages.scrollTop = chatMessages.scrollHeight;
+  updateClearChatButton();
 }
 function hideTypingIndicator() {
   if (typingEl) { typingEl.remove(); typingEl = null; }
+  updateClearChatButton();
 }
+
+let clearingChatWingId = null;
+
+function updateClearChatButton() {
+  if (!btnClearChat) return;
+  const wingId = state.activeWing?.id;
+  const hasHistory = Boolean(
+    wingId && state.messages[wingId]?.some(message =>
+      message.kind === 'general_chat' || message.kind === 'phase_briefing'
+    )
+  );
+  btnClearChat.disabled = !hasHistory || Boolean(clearingChatWingId);
+}
+
+function nextChatRequestVersion(wingId) {
+  const nextVersion = (state.chatRequestVersions[wingId] || 0) + 1;
+  state.chatRequestVersions[wingId] = nextVersion;
+  return nextVersion;
+}
+
+function setChatControlsDisabled(wingId, disabled) {
+  if (state.activeWing?.id !== wingId) return;
+  chatInput.disabled = disabled;
+  btnSend.disabled = disabled;
+  if (btnMic) btnMic.disabled = disabled;
+}
+
+function handleDiscardedChatResponse(wingId, data) {
+  if (!data?.discarded) return false;
+  if (data.discard_reason === 'phase_changed') {
+    showToast('The timeline changed before this wing briefing completed.');
+    return true;
+  }
+  state.messages[wingId] = (state.messages[wingId] || []).filter(
+    message => message.kind !== 'general_chat' && message.kind !== 'phase_briefing'
+  );
+  state.clearedWings.add(wingId);
+  if (state.activeWing?.id === wingId) renderMessages();
+  updateClearChatButton();
+  showToast('This chat was cleared while a response was being generated.');
+  return true;
+}
+
+btnClearChat.addEventListener('click', async () => {
+  const wing = state.activeWing;
+  if (!wing || !state.messages[wing.id]?.length || clearingChatWingId) return;
+  const confirmed = window.confirm(
+    `Clear chat history for ${wing.name}?\n\nThe scenario, exercise phase, inject status, and assessment records will be preserved.`
+  );
+  if (!confirmed) return;
+
+  clearingChatWingId = wing.id;
+  setChatControlsDisabled(wing.id, true);
+  updateClearChatButton();
+  if (sttIsListening && sttRecognition) sttRecognition.stop();
+  ttsStop();
+  hideTypingIndicator();
+
+  const data = await api(`/session/messages/${encodeURIComponent(wing.id)}`, {
+    method: 'DELETE',
+  });
+  if (!data) {
+    clearingChatWingId = null;
+    setChatControlsDisabled(wing.id, false);
+    updateClearChatButton();
+    showToast(`Could not clear chat for ${wing.name}. Please try again.`);
+    btnClearChat.focus();
+    return;
+  }
+
+  nextChatRequestVersion(wing.id);
+  state.phaseBriefingVersions[wing.id] =
+    (state.phaseBriefingVersions[wing.id] || 0) + 1;
+  state.messages[wing.id] = (state.messages[wing.id] || []).filter(
+    message => message.kind !== 'general_chat' && message.kind !== 'phase_briefing'
+  );
+  state.clearedWings.add(wing.id);
+  clearingChatWingId = null;
+  setChatControlsDisabled(wing.id, false);
+  if (state.activeWing?.id === wing.id) renderMessages();
+  updateClearChatButton();
+  showToast(`Chat cleared for ${wing.name}`);
+  if (state.activeWing?.id === wing.id) chatInput.focus();
+});
 
 chatForm.addEventListener('submit', async e => {
   e.preventDefault();
@@ -543,18 +746,19 @@ chatForm.addEventListener('submit', async e => {
   if (!message || !state.activeWing) return;
 
   const wingId  = state.activeWing.id;
-  const phaseId = state.currentPhase ? state.currentPhase.id : 'd_minus_90';
-
+  const requestVersion = state.chatRequestVersions[wingId] || 0;
   addMessage(wingId, 'user', message);
   chatInput.value = '';
 
   showTypingIndicator();
   const data = await api('/chat', {
     method: 'POST',
-    body: JSON.stringify({ wing_id: wingId, phase_id: phaseId, message }),
+    body: JSON.stringify({ wing_id: wingId, message }),
   });
+  if ((state.chatRequestVersions[wingId] || 0) !== requestVersion) return;
   hideTypingIndicator();
 
+  if (handleDiscardedChatResponse(wingId, data)) return;
   if (data) {
     addMessage(wingId, 'system', data.response, data.wing_name);
     ttsAutoPlay(data.response);
@@ -593,18 +797,32 @@ function renderTimeline() {
 
 // ── Phase Controls ─────────────────────────────
 btnAdvance.addEventListener('click', async () => {
+  if (phaseControlPending) return;
+  phaseControlPending = true;
+  updateButtonStates();
   const data = await api('/phase/advance', { method: 'POST' });
-  if (data?.phases) applyPhaseUpdate(data, '⏩ Advanced to');
+  if (data?.phases) await applyPhaseUpdate(data, '⏩ Advanced to');
+  phaseControlPending = false;
+  updateButtonStates();
 });
 
 btnBack.addEventListener('click', async () => {
+  if (phaseControlPending) return;
+  phaseControlPending = true;
+  updateButtonStates();
   const data = await api('/phase/back', { method: 'POST' });
-  if (data?.phases) applyPhaseUpdate(data, '⏪ Returned to');
+  if (data?.phases) await applyPhaseUpdate(data, '⏪ Returned to');
+  phaseControlPending = false;
+  updateButtonStates();
 });
 
 async function applyPhaseUpdate(data, verb) {
+  const previousPhaseId = state.currentPhase?.id;
   state.phases = data.phases;
   state.currentPhase = data.phases.find(p => p.is_active);
+  const phaseChanged = Boolean(
+    state.currentPhase && state.currentPhase.id !== previousPhaseId
+  );
   renderTimeline();
 
   if (state.currentPhase) {
@@ -612,55 +830,98 @@ async function applyPhaseUpdate(data, verb) {
     drawerPhaseLabel.textContent = state.currentPhase.label;
   }
 
-  if (data.injects) { state.injects = data.injects; renderInjects(); }
-  else await loadInjects();
+  await loadInjects(state.activeWing?.id);
 
-  if (state.activeWing && state.currentPhase) {
+  if (phaseChanged && state.activeWing && state.currentPhase) {
     addMessage(state.activeWing.id, 'notification',
       `${verb} **${state.currentPhase.label}** (${state.currentPhase.days})`,
       'Exercise Control');
-    sendGreeting(state.activeWing.id, true);
+    await requestPhaseBriefing(state.activeWing.id);
   }
   updateButtonStates();
   if (data.message) showToast(data.message);
 }
 
 function updateButtonStates() {
+  if (state.session?.role !== 'controller') {
+    btnBack.disabled = true;
+    btnAdvance.disabled = true;
+    return;
+  }
   const idx = state.phases.findIndex(p => p.is_active);
-  btnBack.disabled    = idx === 0;
-  btnAdvance.disabled = idx === state.phases.length - 1;
+  btnBack.disabled    = phaseControlPending || idx === 0;
+  btnAdvance.disabled = phaseControlPending || idx === state.phases.length - 1;
 }
 
+async function requestPhaseBriefing(wingId) {
+  const requestVersion = (state.phaseBriefingVersions[wingId] || 0) + 1;
+  state.phaseBriefingVersions[wingId] = requestVersion;
+  const expectedPhaseId = state.currentPhase?.id;
+  showTypingIndicator();
+  const data = await api(`/wings/${encodeURIComponent(wingId)}/phase-briefing`, {
+    method: 'POST',
+  });
+  if (
+    requestVersion !== state.phaseBriefingVersions[wingId]
+    || state.currentPhase?.id !== expectedPhaseId
+  ) return;
+  hideTypingIndicator();
+  if (handleDiscardedChatResponse(wingId, data)) return;
+  if (data && data.phase_id === expectedPhaseId) {
+    addMessage(wingId, 'system', data.response, data.wing_name, 'phase_briefing');
+    ttsAutoPlay(data.response);
+  }
+}
+
+async function syncSharedPhase() {
+  if (!state.session || document.hidden) return;
+  const data = await api('/phases');
+  const nextPhase = data?.phases?.find(phase => phase.is_active);
+  if (!nextPhase || nextPhase.id === state.currentPhase?.id) return;
+
+  state.phases = data.phases;
+  state.currentPhase = nextPhase;
+  renderTimeline();
+  updateButtonStates();
+  chatPhaseLabel.textContent = nextPhase.label;
+  drawerPhaseLabel.textContent = nextPhase.label;
+  await loadInjects();
+  if (state.activeWing) {
+    addMessage(
+      state.activeWing.id,
+      'notification',
+      `Exercise control moved the shared timeline to **${nextPhase.label}** (${nextPhase.days})`,
+      'Exercise Control',
+    );
+    await requestPhaseBriefing(state.activeWing.id);
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) syncSharedPhase();
+});
+
 btnReset.addEventListener('click', async () => {
-  if (!confirm('Reset exercise to D-90? Chat history and the uploaded scenario summary will be cleared.')) return;
+  if (!confirm('Reset the exercise timeline to D-90? The uploaded scenario and chat will be preserved.')) return;
+  if (phaseControlPending) return;
+  phaseControlPending = true;
+  updateButtonStates();
   const data = await api('/phase/reset', { method: 'POST' });
   if (data?.phases) {
-    state.phases      = data.phases;
-    state.currentPhase = data.phases.find(p => p.is_active);
-    state.scenario     = data.scenario || null;
-    state.injects      = data.injects || [];
-    state.messages    = {};
-    state.activeWing  = null;
-
-    renderTimeline();
+    state.scenario = data.scenario || state.scenario;
     updateHeader();
-    chatMessages.innerHTML = buildWelcomeHTML();
-    chatWingName.textContent  = 'Select a Wing';
-    chatWingIcon.textContent  = '🎯';
-    chatPhaseLabel.textContent = '—';
-    chatInput.disabled = true;
-    btnSend.disabled   = true;
-    btnShowActions.disabled = true;
-    wingList.querySelectorAll('.wing-item').forEach(el => el.classList.remove('active'));
-    if (data.injects) renderInjects();
-    else await loadInjects();
-    showToast('Exercise reset to D-90');
+    await applyPhaseUpdate(data, 'Reset to');
   }
+  phaseControlPending = false;
+  updateButtonStates();
 });
 
 // ── Injects ────────────────────────────────────
-async function loadInjects() {
-  const data = await api('/injects');
+async function loadInjects(wingId = state.activeWing?.id || state.session?.wing_id) {
+  const requestVersion = ++injectRequestVersion;
+  const query = wingId ? `?wing_id=${encodeURIComponent(wingId)}` : '';
+  const data = await api(`/injects${query}`);
+  if (requestVersion !== injectRequestVersion) return;
   if (data) { state.injects = data.injects; renderInjects(); }
 }
 
@@ -790,6 +1051,8 @@ drawerOverlay.addEventListener('click', closeDrawer);
 function showToast(message) {
   const el = document.createElement('div');
   el.className = 'toast';
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
   el.textContent = message;
   document.body.appendChild(el);
   setTimeout(() => {
@@ -811,6 +1074,29 @@ function initSTT() {
   if (!SpeechRecognition) {
     console.warn('Web Speech API not supported in this browser');
     if (btnMic) btnMic.style.display = 'none';
+    return;
+  }
+
+  // Microphone access requires a secure context. Browsers special-case
+  // localhost, so this only bites when the app is served over plain HTTP from
+  // a LAN address — exactly how participants reach it during an exercise.
+  // SpeechRecognition still *exists* on an insecure origin, so checking it
+  // alone leaves a mic button that renders and then silently does nothing.
+  if (!window.isSecureContext || !navigator.mediaDevices) {
+    console.warn(
+      `Microphone disabled: ${location.origin} is not a secure context. ` +
+      'Serve the app over HTTPS (or via localhost) to enable voice input.'
+    );
+    if (btnMic) {
+      // aria-disabled rather than the disabled attribute: a disabled button
+      // fires no click event, and the explanation below is the whole point.
+      btnMic.setAttribute('aria-disabled', 'true');
+      btnMic.classList.add('unavailable');
+      btnMic.title = 'Voice input needs HTTPS — this page is served over plain HTTP';
+      btnMic.addEventListener('click', () => showToast(
+        'Voice input requires HTTPS on LAN. Ask the controller to start SimEx AI with -Https.'
+      ));
+    }
     return;
   }
 
@@ -886,7 +1172,7 @@ let ttsActiveBtn = null;
 let ttsActiveBubbleIdx = null;
 
 async function ttsAutoPlay(text) {
-  if (!text) return;
+  if (!text || localStorage.getItem(TTS_AUTOPLAY_KEY) !== 'true') return;
   // Find the last system message index
   const wingId = state.activeWing?.id;
   if (!wingId || !state.messages[wingId]) return;
@@ -923,7 +1209,10 @@ async function ttsPlayForMessage(msgIdx, text, btn) {
   try {
     const res = await fetch(`${API_BASE}/tts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Session-Id': sessionId,
+      },
       body: JSON.stringify({ text }),
     });
     const data = await res.json();
@@ -1099,29 +1388,181 @@ init();
 
 
 btnUploadScenario.addEventListener('click', () => { fileInputScenario.click(); });
-fileInputScenario.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    btnUploadScenario.innerHTML = '⏳ Wait... ';
-    btnUploadScenario.disabled = true;
+
+// ── Scenario ingestion ─────────────────────────
+// Extraction runs N sequential LLM calls over the document, so it routinely
+// takes minutes. The server returns a job id immediately and we poll it.
+
+const ulOverlay  = $('#upload-overlay');
+const ulStages   = $('#ul-stages');
+const ulMessage  = $('#ul-message');
+const ulFilename = $('#ul-filename');
+const ulPages    = $('#ul-pages');
+const ulKind     = $('#ul-kind');
+const ulElapsed  = $('#ul-elapsed');
+const ulDismiss  = $('#ul-dismiss');
+const ulHint     = $('#ul-hint');
+const ulTitle    = $('#ul-title');
+const ulRingFill = document.querySelector('#upload-overlay .ring-fill');
+
+const UL_ORDER = ['parsing', 'rendering', 'analysing', 'indexing'];
+const UL_CIRCUMFERENCE = 377;
+let ulTimer = null;
+let ulStart = 0;
+
+function ulSetRing(fraction) {
+  if (!ulRingFill) return;
+  const clamped = Math.max(0, Math.min(1, fraction));
+  ulRingFill.style.strokeDashoffset = String(UL_CIRCUMFERENCE * (1 - clamped));
+}
+
+// Stage weights reflect where the time actually goes: analysis dominates.
+function ulFraction(stage, current, total) {
+  switch (stage) {
+    case 'queued':    return 0;
+    case 'parsing':   return 0.04;
+    case 'rendering': return 0.12;
+    case 'analysing': return total > 0 ? 0.15 + (current / total) * 0.72 : 0.15;
+    case 'indexing':  return 0.92;
+    case 'done':      return 1;
+    default:          return 0;
+  }
+}
+
+function ulRenderStages(stage) {
+  const activeIdx = UL_ORDER.indexOf(stage);
+  [...ulStages.children].forEach((li, i) => {
+    if (stage === 'done') li.dataset.state = 'done';
+    else if (activeIdx === -1) li.removeAttribute('data-state');
+    else if (i < activeIdx) li.dataset.state = 'done';
+    else if (i === activeIdx) li.dataset.state = 'active';
+    else li.removeAttribute('data-state');
+  });
+}
+
+function ulTick() {
+  const secs = Math.floor((Date.now() - ulStart) / 1000);
+  ulElapsed.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}
+
+function ulOpen(file) {
+  const ext = (file.name.split('.').pop() || '').toUpperCase();
+  ulKind.textContent = ext.slice(0, 4) || 'FILE';
+  ulFilename.textContent = file.name;
+  ulPages.textContent = '';
+  ulTitle.textContent = 'Ingesting scenario';
+  ulMessage.textContent = 'Uploading document';
+  ulHint.hidden = false;
+  ulDismiss.hidden = true;
+  ulOverlay.dataset.active = 'true';
+  ulOverlay.dataset.indeterminate = 'true';
+  delete ulOverlay.dataset.state;
+  ulRenderStages('parsing');
+  ulSetRing(0);
+  ulOverlay.hidden = false;
+  ulStart = Date.now();
+  ulTick();
+  ulTimer = setInterval(ulTick, 1000);
+}
+
+function ulFinish({ state, title, message, showReload }) {
+  clearInterval(ulTimer);
+  ulOverlay.dataset.state = state;
+  ulOverlay.dataset.active = 'false';
+  ulOverlay.dataset.indeterminate = 'false';
+  ulTitle.textContent = title;
+  ulMessage.textContent = message;
+  ulHint.hidden = true;
+  ulDismiss.hidden = false;
+  ulDismiss.textContent = showReload ? 'Start exercise' : 'Close';
+  ulSetRing(state === 'done' ? 1 : 0.999);
+  if (state === 'done') ulRenderStages('done');
+  // Nothing is in progress any more — don't leave a stage looking active.
+  else [...ulStages.children].forEach(li => li.removeAttribute('data-state'));
+  ulDismiss.onclick = () => {
+    ulOverlay.hidden = true;
+    if (showReload) window.location.reload();
+  };
+  ulDismiss.focus();
+}
+
+async function ulPoll(jobId) {
+  while (true) {
+    await new Promise(r => setTimeout(r, 1200));
+    let job;
     try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetch('/api/scenario/upload', { method: 'POST', body: formData });
-        const data = await response.json();
-        
-        if (!response.ok || data.message.includes("Failed")) {
-            alert('Error: ' + data.message);
-        } else {
-            alert('Scenario Uploaded & Ingested! ' + data.message);
-            window.location.reload();
-        }
+      const res = await fetch(`/api/scenario/upload/${jobId}`, {
+        headers: { 'X-Session-Id': sessionId },
+      });
+      if (res.status === 404) {
+        ulFinish({ state: 'error', title: 'Upload lost',
+          message: 'The server restarted before extraction finished. Upload the document again.' });
+        return;
+      }
+      job = await res.json();
     } catch (err) {
-        console.error(err);
-        alert('Failed to upload scenario');
-    } finally {
-        btnUploadScenario.innerHTML = 'Upload Scenario';
-        btnUploadScenario.disabled = false;
-        e.target.value = '';
+      continue; // transient network blip — keep polling
     }
+
+    if (job.stage === 'analysing' && job.total > 0) ulOverlay.dataset.indeterminate = 'false';
+    if (job.page_count) {
+      ulPages.textContent = `${job.page_count} page${job.page_count === 1 ? '' : 's'}`;
+    }
+    ulMessage.textContent = job.message || '';
+    ulRenderStages(job.stage);
+    ulSetRing(ulFraction(job.stage, job.current, job.total));
+
+    if (job.done) {
+      if (job.error) {
+        ulFinish({ state: 'error', title: 'Extraction failed', message: job.error });
+      } else {
+        const n = job.result?.inject_count ?? 0;
+        ulFinish({
+          state: 'done', title: 'Scenario ready', showReload: true,
+          message: `Extracted ${n} inject${n === 1 ? '' : 's'} from ${job.filename}.`,
+        });
+      }
+      return;
+    }
+  }
+}
+
+fileInputScenario.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+
+  if (/\.doc$/i.test(file.name)) {
+    ulOpen(file);
+    ulFinish({
+      state: 'error', title: 'Save as .docx first',
+      message: 'Legacy .doc files cannot be read. Open it in Word, choose File > Save As, pick Word Document (.docx), then upload again.',
+    });
+    return;
+  }
+
+  ulOpen(file);
+  btnUploadScenario.disabled = true;
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/scenario/upload', {
+      method: 'POST',
+      headers: { 'X-Session-Id': sessionId },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok || !data.job_id) {
+      ulFinish({ state: 'error', title: 'Upload rejected',
+        message: data.message || 'The server would not accept this document.' });
+      return;
+    }
+    await ulPoll(data.job_id);
+  } catch (err) {
+    console.error(err);
+    ulFinish({ state: 'error', title: 'Upload failed',
+      message: 'Could not reach the server. Check that it is running, then try again.' });
+  } finally {
+    btnUploadScenario.disabled = state.session?.role !== 'controller';
+  }
 });

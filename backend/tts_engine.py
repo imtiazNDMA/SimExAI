@@ -7,11 +7,13 @@ import base64
 import io
 import os
 import re
+import warnings
 from typing import Optional
 
 # Lazy-loaded globals
 _pipeline = None
 _available = None
+_init_error = None
 
 
 def _is_available() -> bool:
@@ -30,14 +32,45 @@ def _is_available() -> bool:
 
 
 def _get_pipeline():
-    """Lazy-initialize the Kokoro pipeline on first use."""
-    global _pipeline
+    """Lazy-initialize the Kokoro pipeline on first use.
+
+    Returns None if initialization fails. Kokoro pulls in spaCy and model
+    weights on first use, and those can fail at request time on an offline or
+    throttled network — spacy.cli.download calls sys.exit(), which raises
+    SystemExit rather than a normal exception. Failures are cached in
+    _init_error so every later request degrades to silent no-audio instead of
+    retrying a slow download and returning a 500.
+    """
+    global _pipeline, _init_error
     if _pipeline is not None:
         return _pipeline
-    from kokoro import KPipeline
+    if _init_error is not None:
+        return None
     lang = os.getenv("KOKORO_LANG", "a")  # 'a' = American English
-    _pipeline = KPipeline(lang_code=lang)
-    print(f"Kokoro TTS initialized (lang={lang})")
+    repo_id = os.getenv("KOKORO_REPO_ID", "hexgrad/Kokoro-82M")
+    try:
+        from kokoro import KPipeline
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="dropout option adds dropout after all but last recurrent layer.*",
+                category=UserWarning,
+            )
+            warnings.filterwarnings(
+                "ignore",
+                message="`torch.nn.utils.weight_norm` is deprecated.*",
+                category=FutureWarning,
+            )
+            _pipeline = KPipeline(lang_code=lang, repo_id=repo_id)
+    except (Exception, SystemExit) as e:
+        _init_error = (
+            f"Kokoro TTS initialization failed ({type(e).__name__}: {e}). "
+            "Check that the spaCy model en_core_web_sm is installed and that "
+            "the Kokoro weights are present in the local Hugging Face cache."
+        )
+        print(f"Warning: {_init_error}")
+        return None
+    print(f"Kokoro TTS initialized (lang={lang}, repo={repo_id})")
     return _pipeline
 
 
@@ -78,6 +111,9 @@ def generate_speech(
     import numpy as np
 
     pipeline = _get_pipeline()
+    if pipeline is None:
+        return {"audio": "", "timestamps": [], "error": _init_error}
+
     voice = voice or os.getenv("KOKORO_VOICE", "af_heart")
 
     cleaned = _clean_text_for_tts(text)

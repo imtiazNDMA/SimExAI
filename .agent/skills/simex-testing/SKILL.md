@@ -25,7 +25,7 @@ uv sync
 
 # Run backend
 cd backend
-uvicorn app:app --reload --port 8000
+uvicorn app:app --reload --port 9897
 
 # Serve frontend (separate terminal)
 cd frontend
@@ -36,10 +36,14 @@ python -m http.server 3000
 
 | Variable | Default | Description |
 |---|---|---|
-| `SIMEX_PORT` | `8000` | Backend server port |
-| `SIMEX_SCENARIO` | `earthquake_batagram_7_4` | Active scenario ID |
-| `RESPONSE_ENGINE` | `template` | `template` or `ollama` (future) |
-| `OLLAMA_URL` | `http://localhost:11434` | Ollama API URL (future) |
+| `PINECONE_API_KEY` | _(none)_ | Required for RAG retrieval |
+| `PINECONE_INDEX_NAME` | `simexai` | Pinecone index |
+| `LMSTUDIO_BASE_URL` | `http://localhost:1234/v1` | LM Studio OpenAI-compatible endpoint |
+| `LMSTUDIO_MODEL` | `google/gemma-4-26b-a4b` | Model id as listed by `/v1/models` |
+| `LMSTUDIO_MAX_TOKENS` | `3000` | Chat token budget (covers reasoning + answer) |
+
+The active scenario is not an env var — it is whatever was last uploaded, tracked in
+`data/simex.db`. The server port is set by the launcher (`start.bat -Port <n>`).
 
 ## Testing Patterns
 
@@ -60,22 +64,27 @@ python -m http.server 3000
 ### API Testing with curl
 
 ```bash
+# Bootstrap once; use this header on every subsequent API request
+SESSION_ID="11111111-1111-4111-8111-111111111111"
+curl -X POST http://localhost:9897/api/session -H "X-Session-Id: $SESSION_ID"
+
 # Get scenario info
-curl http://localhost:8000/api/scenario
+curl http://localhost:9897/api/scenario -H "X-Session-Id: $SESSION_ID"
 
 # Get all wings
-curl http://localhost:8000/api/wings
+curl http://localhost:9897/api/wings -H "X-Session-Id: $SESSION_ID"
 
 # Send a chat message
-curl -X POST http://localhost:8000/api/chat \
+curl -X POST http://localhost:9897/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"wing_id": "ops_wing", "phase_id": "d_minus_90", "message": "What is the current status?"}'
+  -H "X-Session-Id: $SESSION_ID" \
+  -d '{"wing_id": "operations_logistic", "message": "What is the current status?"}'
 
 # Advance phase
-curl -X POST http://localhost:8000/api/phase/advance
+curl -X POST http://localhost:9897/api/phase/advance -H "X-Session-Id: $SESSION_ID"
 
 # Get injects for current phase
-curl http://localhost:8000/api/injects
+curl http://localhost:9897/api/injects -H "X-Session-Id: $SESSION_ID"
 ```
 
 ### Data Validation
@@ -96,8 +105,8 @@ FROM python:3.14-slim
 WORKDIR /app
 COPY . .
 RUN pip install -e .
-EXPOSE 8000
-CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE 9897
+CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "9897"]
 ```
 
 ### Frontend Serving

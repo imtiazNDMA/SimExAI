@@ -5,7 +5,6 @@ from typing import Optional
 
 class ChatRequest(BaseModel):
     wing_id: str
-    phase_id: str
     message: str
 
 
@@ -16,6 +15,8 @@ class ChatResponse(BaseModel):
     phase_label: str
     response: str
     timestamp: str
+    discarded: bool = False
+    discard_reason: Optional[str] = None
 
 
 class PhaseInfo(BaseModel):

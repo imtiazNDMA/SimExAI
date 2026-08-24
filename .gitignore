@@ -14,3 +14,22 @@ wheels/
 *.db
 *.sqlite3
 data/simex.db
+
+# Secrets and local agent config
+.env.bak*
+.env.*
+!.env.example
+.agents/
+.vscode/
+
+# Local throwaway probes
+.tmp_*
+
+# Generated probe fixtures (regenerate: scripts/make_stt_fixtures.py)
+scratch/
+
+# Playwright MCP session artifacts
+.playwright-mcp/
+
+# Locally generated HTTPS certificates and private keys
+.certs/
