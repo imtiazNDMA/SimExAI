@@ -7,6 +7,7 @@ REM      start.bat
 REM      start.bat -Port 8080
 REM      start.bat -NoSync
 REM      start.bat -NoBrowser
+REM      start.bat -Https
 REM
 REM  All arguments are passed through to start.ps1.
 REM ===========================================================

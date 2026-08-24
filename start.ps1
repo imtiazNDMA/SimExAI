@@ -23,6 +23,17 @@
 .PARAMETER NoBrowser
     Don't open the browser.
 
+.PARAMETER Https
+    Serve the app over HTTPS. Required for microphone access from LAN clients.
+    Uses .certs/simexai-server.cert.pem and .certs/simexai-server.key.pem unless
+    explicit certificate paths are provided.
+
+.PARAMETER SslCertFile
+    PEM server certificate path. Supplying it enables HTTPS.
+
+.PARAMETER SslKeyFile
+    PEM private-key path. Supplying it enables HTTPS.
+
 .EXAMPLE
     .\start.ps1
 .EXAMPLE
@@ -30,13 +41,19 @@
 .EXAMPLE
     # Local-only, not reachable from the network
     .\start.ps1 -BindHost 127.0.0.1
+.EXAMPLE
+    # First run: .\scripts\setup_https.ps1 -TrustLocal
+    .\start.ps1 -Https
 #>
 [CmdletBinding()]
 param(
     [int]$Port = 9897,
     [string]$BindHost = '0.0.0.0',
     [switch]$NoSync,
-    [switch]$NoBrowser
+    [switch]$NoBrowser,
+    [switch]$Https,
+    [string]$SslCertFile,
+    [string]$SslKeyFile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -161,10 +178,37 @@ if ($portBusy) {
 }
 Write-Ok "Port $Port is free"
 
-# ── 6. Browser opener (background) ──────────────────────────
+# ── 6. HTTPS configuration ──────────────────────────────────
+$useHttps = $Https -or $SslCertFile -or $SslKeyFile
+if ($useHttps) {
+    if (-not $SslCertFile) {
+        $SslCertFile = Join-Path $root '.certs\simexai-server.cert.pem'
+    }
+    if (-not $SslKeyFile) {
+        $SslKeyFile = Join-Path $root '.certs\simexai-server.key.pem'
+    }
+    if (-not (Test-Path -LiteralPath $SslCertFile)) {
+        Write-Err "HTTPS certificate not found: $SslCertFile"
+        Write-Host "    Generate one with: .\scripts\setup_https.ps1 -TrustLocal"
+        exit 1
+    }
+    if (-not (Test-Path -LiteralPath $SslKeyFile)) {
+        Write-Err "HTTPS private key not found: $SslKeyFile"
+        Write-Host "    Generate one with: .\scripts\setup_https.ps1 -TrustLocal"
+        exit 1
+    }
+    $SslCertFile = (Resolve-Path -LiteralPath $SslCertFile).Path
+    $SslKeyFile = (Resolve-Path -LiteralPath $SslKeyFile).Path
+    Write-Ok "HTTPS enabled"
+} elseif ($BindHost -eq '0.0.0.0') {
+    Write-Warn "LAN clients will not have microphone access over HTTP. Use -Https for voice input."
+}
+
+# ── 7. Browser opener (background) ──────────────────────────
 # Always open the local URL -- 0.0.0.0 is a bind address, not something a
 # browser can navigate to.
-$appUrl = "http://localhost:$Port"
+$appUrl = if ($useHttps) { "https://localhost:$Port" } else { "http://localhost:$Port" }
+$urlScheme = if ($useHttps) { 'https' } else { 'http' }
 
 # When listening on all interfaces, work out the addresses other machines use.
 # The interface name is shown alongside each one because this box also has
@@ -182,7 +226,7 @@ if ($BindHost -eq '0.0.0.0') {
             Sort-Object IPAddress -Unique |
             ForEach-Object {
                 [PSCustomObject]@{
-                    Url       = "http://$($_.IPAddress):$Port"
+                    Url       = "$urlScheme`://$($_.IPAddress):$Port"
                     Interface = $_.InterfaceAlias
                 }
             }
@@ -193,9 +237,27 @@ if (-not $NoBrowser) {
     Start-Job -Name 'simexai-browser' -ScriptBlock {
         param($url)
         # Poll until the server answers, then open once. Give up after ~60s.
+        $uri = [Uri]$url
         for ($i = 0; $i -lt 120; $i++) {
             Start-Sleep -Milliseconds 500
             try {
+                # Windows PowerShell 5.1 can reject a trusted private CA when
+                # it has no online revocation server. For HTTPS, a successful
+                # TCP connection is enough before handing the URL to the browser.
+                if ($uri.Scheme -eq 'https') {
+                    $client = New-Object System.Net.Sockets.TcpClient
+                    try {
+                        $pending = $client.BeginConnect($uri.Host, $uri.Port, $null, $null)
+                        if ($pending.AsyncWaitHandle.WaitOne(2000)) {
+                            $client.EndConnect($pending)
+                            Start-Process $url
+                            return
+                        }
+                    } finally {
+                        $client.Close()
+                    }
+                    continue
+                }
                 $r = Invoke-WebRequest -Uri $url -TimeoutSec 2 -UseBasicParsing
                 if ($r.StatusCode -eq 200) {
                     Start-Process $url
@@ -208,7 +270,7 @@ if (-not $NoBrowser) {
     } -ArgumentList $appUrl | Out-Null
 }
 
-# ── 7. Launch ───────────────────────────────────────────────
+# ── 8. Launch ───────────────────────────────────────────────
 Write-Step "Starting SimEx AI on $appUrl"
 if ($BindHost -eq '0.0.0.0') {
     if ($lanUrls) {
@@ -229,7 +291,14 @@ Write-Host "    Press Ctrl+C to stop." -ForegroundColor DarkGray
 Write-Host ""
 
 try {
-    & uv run uvicorn backend.app:app --reload --host $BindHost --port $Port
+    $uvicornArgs = @(
+        'run', 'uvicorn', 'backend.app:app', '--reload',
+        '--host', $BindHost, '--port', $Port
+    )
+    if ($useHttps) {
+        $uvicornArgs += @("--ssl-certfile", $SslCertFile, "--ssl-keyfile", $SslKeyFile)
+    }
+    & uv @uvicornArgs
 } finally {
     # Clean up the browser job whether we exited normally or via Ctrl+C.
     Get-Job -Name 'simexai-browser' -ErrorAction SilentlyContinue |

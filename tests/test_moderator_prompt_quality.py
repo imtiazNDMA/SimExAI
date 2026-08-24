@@ -43,6 +43,24 @@ def test_prompt_has_one_mandate_copy_and_natural_conversation_rules():
     assert 'Do not ask for something "specific"' in system_prompt
 
 
+def test_prompt_includes_phase_responsibilities_and_other_wing_ownership():
+    responder = build_responder()
+    system_prompt = responder._build_system_prompt(
+        responder.get_wing_name("technical_early_warning"),
+        "technical_early_warning",
+        "d_day",
+    )
+
+    assert "Current-phase responsibilities:" in system_prompt
+    assert "Provide early warning updates and risk intelligence" in system_prompt
+    assert "Current-phase exercise actions:" in system_prompt
+    assert "Validate the hazard trigger" in system_prompt
+    assert "Other-wing ownership boundaries:" in system_prompt
+    assert "Regional & Military Collaboration and Media Wing" in system_prompt
+    assert "Operations and Logistic Wing" in system_prompt
+    assert "An inject does not transfer another wing's responsibilities" in system_prompt
+
+
 def test_greeting_prompt_orients_instead_of_appraising():
     responder = build_responder()
     wing_id = "operations_logistic"
@@ -264,6 +282,193 @@ def test_safe_fallback_varies_against_conversation_history():
         history=all_variants,
     )
     assert not exhausted.endswith(all_variants[-1]["content"])
+
+
+def test_semantically_repeated_follow_up_changes_lens():
+    responder = build_responder()
+
+    class StaticLLM:
+        def invoke(self, _messages):
+            class Result:
+                content = (
+                    "Detecting anomalies is a useful first step. "
+                    "What decision must that approach support?"
+                )
+
+            return Result()
+
+    responder.llm = StaticLLM()
+    response = responder.get_response(
+        "technical_early_warning",
+        "d_minus_90",
+        "Once the data is ingested, we analyse it and detect anomalies.",
+        history=[
+            {
+                "role": "assistant",
+                "content": "What operational outcome should follow from that approach?",
+                "phase_id": "d_minus_90",
+            }
+        ],
+    )
+
+    assert "What decision must that approach support?" not in response
+    assert response.endswith("What consequence would make you adjust that approach?")
+
+
+def test_technical_early_warning_rejects_media_and_operations_ownership():
+    responder = build_responder()
+
+    class StaticLLM:
+        def __init__(self, content):
+            self.content = content
+
+        def invoke(self, _messages):
+            class Result:
+                content = self.content
+
+            return Result()
+
+    for draft in (
+        "Which media briefing and public messaging strategy will your wing lead?",
+        "How will your wing deploy relief trucks and manage relief distribution?",
+    ):
+        responder.llm = StaticLLM(draft)
+        response = responder.get_response(
+            "technical_early_warning",
+            "d_minus_90",
+            "We are monitoring the hazard and updating our risk analysis.",
+        )
+
+        assert response != draft
+        assert "media briefing" not in response.lower()
+        assert "relief" not in response.lower()
+
+
+def test_technical_early_warning_allows_boundary_aware_handoff():
+    responder = build_responder()
+
+    class StaticLLM:
+        def invoke(self, _messages):
+            class Result:
+                content = (
+                    "What verified warning content will you provide to RM & Media "
+                    "for public dissemination?"
+                )
+
+            return Result()
+
+    responder.llm = StaticLLM()
+    response = responder.get_response(
+        "technical_early_warning",
+        "d_minus_90",
+        "We will validate the warning before sharing it with response wings.",
+    )
+
+    assert response == (
+        "What verified warning content will you provide to RM & Media "
+        "for public dissemination?"
+    )
+
+
+def test_role_owners_keep_their_media_and_operations_questions():
+    responder = build_responder()
+
+    class StaticLLM:
+        def __init__(self, content):
+            self.content = content
+
+        def invoke(self, _messages):
+            class Result:
+                content = self.content
+
+            return Result()
+
+    cases = (
+        (
+            "regional_military_media",
+            "Which media briefing and public messaging strategy will your wing lead?",
+        ),
+        (
+            "operations_logistic",
+            "How will your wing deploy relief trucks and manage relief distribution?",
+        ),
+    )
+    for wing_id, draft in cases:
+        responder.llm = StaticLLM(draft)
+        response = responder.get_response(
+            wing_id,
+            "d_minus_90",
+            "We are reviewing our current responsibilities.",
+        )
+        assert response == draft
+
+
+def test_technical_early_warning_rejects_distinct_other_wing_ownership():
+    responder = build_responder()
+    violations = (
+        "How will your wing design volunteer training curricula?",
+        "How will your wing maintain NDMA network hardware?",
+        "How will your wing formulate national DRR policy?",
+        "How will your wing conduct structural safety inspections?",
+        "How will your wing activate response clusters and field deployments?",
+        "Which public messaging strategy will your wing lead?",
+        "How will your wing manage relief distribution?",
+        "How will your wing obtain diplomatic clearances for foreign response teams?",
+    )
+
+    for draft in violations:
+        assert responder._has_out_of_role_ownership(
+            draft, "technical_early_warning"
+        ), draft
+
+
+def test_role_boundary_validation_is_clause_scoped():
+    responder = build_responder()
+
+    mixed = (
+        "Provide verified warnings to RM & Media. "
+        "How will your wing manage relief distribution?"
+    )
+    contextual = (
+        "Relief distribution remains constrained. "
+        "How will you coordinate the warning update with PDMAs?"
+    )
+    same_clause = (
+        "What warning will you provide to Plans and how will your wing manage "
+        "relief distribution?"
+    )
+    named_assignment = (
+        "Technical Early Warning Wing will lead the media briefing."
+    )
+    valid_coordination = (
+        "How will you coordinate diplomatic clearances with International Collaboration?"
+    )
+    direct_coordination = "How will your wing coordinate relief distribution?"
+    abbreviated_assignment = "Tech EW will lead the media briefing."
+
+    assert responder._has_out_of_role_ownership(mixed, "technical_early_warning")
+    assert responder._has_out_of_role_ownership(
+        same_clause, "technical_early_warning"
+    )
+    assert responder._has_out_of_role_ownership(
+        named_assignment, "technical_early_warning"
+    )
+    assert responder._has_out_of_role_ownership(
+        direct_coordination, "technical_early_warning"
+    )
+    assert responder._has_out_of_role_ownership(
+        abbreviated_assignment, "technical_early_warning"
+    )
+    assert not responder._has_out_of_role_ownership(
+        contextual, "technical_early_warning"
+    )
+    assert not responder._has_out_of_role_ownership(
+        valid_coordination, "plans"
+    )
+    assert not responder._has_out_of_role_ownership(
+        "How will your wing formulate national contingency plans?",
+        "operations_logistic",
+    )
 
 
 def test_prior_assistant_hallucination_is_not_trusted_as_grounding():

@@ -15,6 +15,8 @@ class ChatResponse(BaseModel):
     phase_label: str
     response: str
     timestamp: str
+    discarded: bool = False
+    discard_reason: Optional[str] = None
 
 
 class PhaseInfo(BaseModel):

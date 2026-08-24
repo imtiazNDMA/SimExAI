@@ -76,6 +76,39 @@ Options (passed through to `start.ps1`):
 | `-BindHost 127.0.0.1` | Listen on this machine only (default `0.0.0.0`, i.e. network-accessible) |
 | `-NoSync` | Skip `uv sync` for fast restarts |
 | `-NoBrowser` | Don't open the browser |
+| `-Https` | Serve trusted HTTPS for microphone access on LAN clients |
+| `-SslCertFile <path>` | Use an organization-issued PEM certificate (enables HTTPS) |
+| `-SslKeyFile <path>` | Use the matching PEM private key |
+
+### HTTPS and voice input
+
+Browsers permit microphone capture on HTTPS origins and on the special
+`http://localhost` exception. Participants opening `http://<LAN-IP>:9897` cannot use
+voice input. Configure HTTPS once on the server:
+
+```powershell
+.\scripts\setup_https.ps1 -TrustLocal
+start.bat -Https
+```
+
+The setup script creates a local CA and a server certificate containing `localhost`
+and the server's current LAN IPv4 addresses. On every participant machine, copy only
+`.certs\simexai-ca.cert.pem` and trust it for that user:
+
+```powershell
+certutil -user -addstore Root .\simexai-ca.cert.pem
+```
+
+Participants must then use one of the `https://<LAN-IP>:9897` addresses printed by
+the launcher. Regenerate the certificate with `-Force` if the server's DHCP address
+changes. Never distribute `simexai-ca.key.pem` or `simexai-server.key.pem`.
+
+For managed NDMA deployments, prefer an internal DNS name and an organization-issued
+certificate whose CA is already trusted on participant machines:
+
+```powershell
+start.bat -SslCertFile C:\certs\simexai.pem -SslKeyFile C:\certs\simexai-key.pem
+```
 
 **Manual:**
 
@@ -89,4 +122,13 @@ uv run uvicorn backend.app:app --reload --host 0.0.0.0 --port 9897
 # Access the application
 # On this machine:    http://localhost:9897
 # From another machine: http://<this-machine-ip>:9897
+```
+
+## Testing
+
+Install the Chromium runtime once, then run the complete suite:
+
+```bash
+uv run playwright install chromium
+uv run pytest -q
 ```

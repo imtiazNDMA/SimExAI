@@ -30,3 +30,6 @@ scratch/
 
 # Playwright MCP session artifacts
 .playwright-mcp/
+
+# Locally generated HTTPS certificates and private keys
+.certs/

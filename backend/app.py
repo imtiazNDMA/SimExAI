@@ -26,17 +26,20 @@ from .vector_store import VectorStore
 from .database import (
     bind_session_wing,
     change_exercise_phase,
+    delete_messages_for_wing,
     ensure_session,
     get_inject_state,
+    get_message_history_version,
     init_db,
     load_exercise,
+    load_message_snapshot,
     load_messages,
     load_session,
     mark_inject_addressed,
     mark_injects_delivered,
     reset_exercise_phase,
     save_injects,
-    save_message,
+    save_message_if_history_version,
     save_scenario,
     touch_session,
     update_exercise,
@@ -74,6 +77,7 @@ except Exception as e:
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 PHASE_IDS = {phase["id"] for phase in PHASES}
+PHASE_ORDER = {phase["id"]: index for index, phase in enumerate(PHASES)}
 mandates = MandateRegistry()
 logger = logging.getLogger(__name__)
 
@@ -159,6 +163,21 @@ def _format_inject_ledger(session_id: str, injects: list[dict]) -> str:
         for inject in injects
     ]
     return "\n".join(lines) or "- No active injects for this phase."
+
+
+def _load_wing_history(session_id: str, wing_id: str, phase_id: str) -> list[dict]:
+    """Load only this wing's transcript up to the authoritative current phase."""
+    current_index = PHASE_ORDER.get(phase_id, 0)
+    return [
+        message
+        for message in load_messages(session_id)
+        if message.get("wing_id") == wing_id
+        and message.get("kind", "general_chat") in {"general_chat", "phase_briefing"}
+        and (
+            not message.get("phase_id")
+            or PHASE_ORDER.get(message["phase_id"], current_index) <= current_index
+        )
+    ]
 
 
 SessionDep = Annotated[SessionContext, Depends(require_session)]
@@ -737,12 +756,9 @@ def chat(request: ChatRequest, context: SessionDep) -> ChatResponse:
     phase = context.scenario.get_current_phase()
     wing_id = _resolve_wing(context, request.wing_id)
     _bind_session_wing(context, wing_id)
+    history_version = get_message_history_version(context.session["id"], wing_id)
 
-    history = [
-        message
-        for message in load_messages(context.session["id"])
-        if message.get("wing_id") in (None, wing_id)
-    ]
+    history = _load_wing_history(context.session["id"], wing_id, phase["id"])
 
     injects = context.scenario.get_current_injects(wing_id)
     mark_injects_delivered(context.session["id"], [inject["id"] for inject in injects])
@@ -751,10 +767,21 @@ def chat(request: ChatRequest, context: SessionDep) -> ChatResponse:
             mark_inject_addressed(context.session["id"], inject["id"])
     inject_ledger = _format_inject_ledger(context.session["id"], injects)
 
-    save_message(
-        context.session["id"], "user", request.message,
-        phase_id=phase["id"], wing_id=wing_id,
+    user_message_id = save_message_if_history_version(
+        context.session["id"], wing_id, history_version, "user", request.message,
+        phase_id=phase["id"],
     )
+    if user_message_id is None:
+        return ChatResponse(
+            wing_id=wing_id,
+            wing_name=context.responder.get_wing_name(wing_id),
+            phase_id=phase["id"],
+            phase_label=phase["label"],
+            response="",
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            discarded=True,
+            discard_reason="history_cleared",
+        )
     response_text = context.responder.get_response(
         wing_id=wing_id,
         phase_id=phase["id"],
@@ -762,9 +789,9 @@ def chat(request: ChatRequest, context: SessionDep) -> ChatResponse:
         history=history,
         inject_ledger=inject_ledger,
     )
-    save_message(
-        context.session["id"], "assistant", response_text,
-        phase_id=phase["id"], wing_id=wing_id,
+    assistant_message_id = save_message_if_history_version(
+        context.session["id"], wing_id, history_version, "assistant", response_text,
+        phase_id=phase["id"],
     )
 
     return ChatResponse(
@@ -772,15 +799,90 @@ def chat(request: ChatRequest, context: SessionDep) -> ChatResponse:
         wing_name=context.responder.get_wing_name(wing_id),
         phase_id=phase["id"],
         phase_label=phase["label"],
-        response=response_text,
+        response=response_text if assistant_message_id is not None else "",
         timestamp=datetime.now(timezone.utc).isoformat(),
+        discarded=assistant_message_id is None,
+        discard_reason="history_cleared" if assistant_message_id is None else None,
+    )
+
+
+@app.post("/api/wings/{wing_id}/phase-briefing")
+def get_wing_phase_briefing(wing_id: str, context: SessionDep) -> ChatResponse:
+    """Generate a current-phase briefing without creating a fake participant turn."""
+    phase = context.scenario.get_current_phase()
+    canonical_id = _resolve_wing(context, wing_id)
+    _bind_session_wing(context, canonical_id)
+    history_version = get_message_history_version(context.session["id"], canonical_id)
+    history = _load_wing_history(context.session["id"], canonical_id, phase["id"])
+    injects = context.scenario.get_current_injects(canonical_id)
+    mark_injects_delivered(context.session["id"], [inject["id"] for inject in injects])
+    inject_ledger = _format_inject_ledger(context.session["id"], injects)
+    phase_event = (
+        f"The authoritative exercise timeline is now {phase['label']} ({phase['days']}). "
+        "Provide the current-phase briefing for this wing."
+    )
+    response_text = context.responder.get_response(
+        wing_id=canonical_id,
+        phase_id=phase["id"],
+        user_message=phase_event,
+        history=history,
+        inject_ledger=inject_ledger,
+        turn_mode="phase_briefing",
+    )
+    message_id = save_message_if_history_version(
+        context.session["id"],
+        canonical_id,
+        history_version,
+        "assistant",
+        response_text,
+        phase_id=phase["id"],
+        kind="phase_briefing",
+        exercise_id=context.exercise["id"],
+        expected_phase_index=context.scenario.current_phase_index,
+    )
+    discard_reason = None
+    if message_id is None:
+        current_exercise = load_exercise(context.exercise["id"])
+        discard_reason = (
+            "phase_changed"
+            if current_exercise.get("current_phase_index")
+            != context.scenario.current_phase_index
+            else "history_cleared"
+        )
+    return ChatResponse(
+        wing_id=canonical_id,
+        wing_name=context.responder.get_wing_name(canonical_id),
+        phase_id=phase["id"],
+        phase_label=phase["label"],
+        response=response_text if message_id is not None else "",
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        discarded=message_id is None,
+        discard_reason=discard_reason,
     )
 
 
 @app.get("/api/session/messages")
 def get_session_messages(context: SessionDep):
     """Return the session transcript oldest-first for history restore on page load."""
-    return {"messages": load_messages(context.session["id"])}
+    messages, cleared_wings = load_message_snapshot(context.session["id"])
+    return {
+        "messages": messages,
+        "cleared_wings": cleared_wings,
+    }
+
+
+@app.delete("/api/session/messages/{wing_id}")
+def clear_session_wing_messages(wing_id: str, context: SessionDep):
+    """Clear only the caller's transcript for one authorized wing."""
+    canonical_id = _resolve_wing(context, wing_id)
+    if (
+        context.session.get("role") != "controller"
+        and context.session.get("wing_id") != canonical_id
+    ):
+        raise HTTPException(status_code=403, detail="Session is assigned to another wing")
+
+    deleted_count = delete_messages_for_wing(context.session["id"], canonical_id)
+    return {"wing_id": canonical_id, "deleted_count": deleted_count}
 
 
 @app.get("/api/injects")

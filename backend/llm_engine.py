@@ -59,6 +59,130 @@ TECHNICAL_CONCEPT_PATTERNS = {
     "tool": re.compile(r"\btools?\b", re.IGNORECASE),
     "workflow": re.compile(r"\bworkflows?\b", re.IGNORECASE),
 }
+QUESTION_LENS_PATTERNS = (
+    (
+        "ownership",
+        re.compile(r"\b(?:who|accountab\w*|responsib\w*|owners?|owns?|ownership)\b", re.IGNORECASE),
+    ),
+    (
+        "trade_off",
+        re.compile(r"\b(?:trade[ -]?offs?|balance|sacrifice|compromise)\b", re.IGNORECASE),
+    ),
+    (
+        "contingency",
+        re.compile(
+            r"\b(?:consequen\w*|contingenc\w*|adjust\w*|change|fail\w*|worsen\w*)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "operational_purpose",
+        re.compile(
+            r"\b(?:decisions?|outcomes?|enable\w*|support\w*|unlock\w*|achieve\w*|preparedness choice)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "priority",
+        re.compile(r"\b(?:priorit\w*|most important|greatest risk|primary risk)\b", re.IGNORECASE),
+    ),
+)
+ROLE_OWNERSHIP_PATTERNS = (
+    (
+        {"technical_early_warning", "regional_military_media", "tech_equipment_maintenance"},
+        re.compile(
+            r"\b(?:hazard forecasts?|impact-based warnings?|early warning systems?|"
+            r"hazard or exposure maps?|forecast thresholds?)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        {"nidm"},
+        re.compile(
+            r"\b(?:volunteer training|training curricula|academic research|disaster archives?|"
+            r"lessons learned programme)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        {"tech_equipment_maintenance"},
+        re.compile(
+            r"\b(?:network hardware|hardware maintenance|sitrep portals?|data backups?|"
+            r"ict infrastructure)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        {"drr"},
+        re.compile(
+            r"\b(?:national drr polic(?:y|ies)|risk reduction frameworks?|sendai framework|"
+            r"drr programmes?)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        {"infrastructure_advisory_project_development"},
+        re.compile(
+            r"\b(?:structural safety inspections?|infrastructure repairs?|engineering works?|"
+            r"infrastructure cost estimates?)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        {"plans"},
+        re.compile(
+            r"\b(?:response clusters?|cluster activation|field deployments?|neoc activation)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        {"plans", "operations_logistic"},
+        re.compile(r"\bnational contingency plans?\b", re.IGNORECASE),
+    ),
+    (
+        {"regional_military_media"},
+        re.compile(
+            r"\b(?:media brief(?:ing)?s?|press releases?|public messaging|media strateg(?:y|ies)|"
+            r"misinformation|spokespersons?|journalists?|public communication campaigns?|media line)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        {"operations_logistic"},
+        re.compile(
+            r"\b(?:relief trucks?|relief distribution|rescue operations?|evacuation operations?|"
+            r"relief camps?|warehouses?|procurement|search and rescue)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        {"international_collaboration"},
+        re.compile(
+            r"\b(?:international assistance requests?|diplomatic clearances?|foreign response "
+            r"teams?|donor pledges?|international donors?)\b",
+            re.IGNORECASE,
+        ),
+    ),
+)
+ROLE_OWNERSHIP_CUE_RE = re.compile(
+    r"\b(?:your wing|you)\b.*\b(?:lead|manage|deploy|draft|issue|publish|run|develop|"
+    r"formulate|coordinate|execute|operate|activate|own|handle|oversee|design|maintain|"
+    r"conduct|obtain)\w*\b|"
+    r"\b(?:lead|manage|deploy|draft|issue|publish|run|develop|formulate|coordinate|"
+    r"execute|operate|activate|coordinate|own|handle|oversee|design|maintain|conduct|obtain)\w*\b.*"
+    r"\b(?:your wing|you)\b|"
+    r"\b(?:your wing|you)\b.*\b(?:accountable|responsible)\b",
+    re.IGNORECASE,
+)
+BOUNDARY_HANDOFF_RE = re.compile(
+    r"\b(?:(?:provide|share|send|hand(?:off)?|brief)\w*\b.*?\bto|"
+    r"coordinate\w*\b.*?\bwith)\s+(?:the\s+)?"
+    r"(?:tech(?:nical)?\s+early\s+warning(?:\s+wing)?|tech(?:nical)?\s+e\s*&\s*m|"
+    r"nidm|drr(?:\s+wing)?|ia\s*&\s*pd|rm\s*&\s*media|media wing|"
+    r"operations(?:\s+and\s+logistic)?(?:\s+wing)?|plans(?:\s+wing)?|"
+    r"international collaboration(?:\s+wing)?|response wings?|other wings?)\b",
+    re.IGNORECASE,
+)
 
 
 class LLMEngine:
@@ -204,6 +328,7 @@ class LLMEngine:
         user_message: str,
         history: list[dict] | None = None,
         inject_ledger: str | None = None,
+        turn_mode: str | None = None,
     ) -> str:
         wing_id = self.normalize_wing_id(wing_id) or wing_id
         wing_name = self.get_wing_name(wing_id)
@@ -218,13 +343,15 @@ class LLMEngine:
 
         phase = self._get_phase(phase_id)
         is_phase_change = self._is_phase_change_prompt(user_message)
-        turn_mode = (
-            "phase_briefing"
-            if is_phase_change
-            else "orientation"
-            if self._is_greeting(user_message) and not history
-            else "discussion"
-        )
+        if turn_mode not in {"orientation", "phase_briefing", "discussion"}:
+            turn_mode = (
+                "phase_briefing"
+                if is_phase_change
+                else "orientation"
+                if self._is_greeting(user_message) and not history
+                else "discussion"
+            )
+        is_phase_change = turn_mode == "phase_briefing" or is_phase_change
         
         retrieved_chunks = []
         if self.vector_store:
@@ -274,7 +401,7 @@ class LLMEngine:
         content = self._strip_thinking(content)
         content = self._sanitize_output(content, suppress_welcome=is_phase_change)
         if content and self._needs_conversational_revision(
-            content, user_message, grounding_text
+            content, user_message, grounding_text, history, wing_id
         ):
             content = self._revise_response(
                 messages,
@@ -282,6 +409,7 @@ class LLMEngine:
                 user_message,
                 grounding_text,
                 history,
+                wing_id,
                 suppress_welcome=is_phase_change,
             )
         return content or "I could not generate a useful response. Please try again with a clearer exercise question."
@@ -387,10 +515,11 @@ Wing role boundary (use it to judge role relevance, not as a checklist or a sour
 Moderation policy:
 - Ground every situation statement in the supplied scenario, current phase, active injects, retrieved source context, or conversation history. Do not invent operational details, thresholds, assets, locations, damage, or events.
 - Scenario evidence outranks generic mandate material. Do not force every turn into a mandate checklist or ask about a specialist process unless the scenario or participant raises it.
+- Keep every appraisal and question inside the selected wing's responsibilities above. An inject does not transfer another wing's responsibilities. Mention another wing only to test the selected wing's mandated input, decision-support product, coordination commitment, or handoff; never ask the participant to own that other wing's downstream execution.
 - Respond to the substance of the participant's last message before asking anything else. Recognize sound reasoning briefly; identify at most one important gap at a time.
 - Ask no more than one focused question per turn. A question is optional when a clear statement or transition is more natural.
 - Prefer decision-level questions about priorities, trade-offs, ownership, coordination outcomes, and consequences. Do not quiz the participant for names of tools, indices, parameters, platforms, data streams, models, or exact thresholds unless they introduced that technical subject or the active inject explicitly requires it.
-- Question selection rule: on an opening turn, choose a broad scenario-relevant lens such as priority, risk judgement, or preparedness objective. On later turns, choose one useful lens only: the decision enabled, a trade-off, accountable ownership, the expected operational outcome, or a contingency. Vary the lens and sentence shape using conversation history; do not repeat the same question formula on consecutive turns. Do not ask for something "specific" or request a technical mechanism unless the participant asks for a technical deep dive or the current inject explicitly requires that mechanism.
+- Question selection rule: on an opening turn, choose a broad scenario-relevant lens such as priority, risk judgement, or preparedness objective. On later turns, choose one useful lens only: the decision enabled, a trade-off, accountable ownership, the expected operational outcome, or a contingency. Change the substantive lens, not merely the wording, after each question. If the participant does not answer a follow-up directly, do not ask it again or paraphrase it; briefly identify the remaining gap, then use a different lens or provide the natural consequence or transition without a question. Do not ask for something "specific" or request a technical mechanism unless the participant asks for a technical deep dive or the current inject explicitly requires that mechanism.
 - Do not solve the exercise, prescribe a complete action plan, or reveal future injects. Test judgement through realistic consequences and selective follow-up.
 - Use conversation history to avoid repeating welcomes, facts, feedback, and question patterns.
 
@@ -438,15 +567,20 @@ Inject status ledger (delivered = already presented to the participant; addresse
                 "niche mandate function, or list recommended actions."
             ),
             "phase_briefing": (
-                "Brief only what has materially changed in this phase, without another welcome "
-                "or role acknowledgement. End with one decision question tied to the changed "
-                "conditions; do not list a complete response plan."
+                "Orient the participant to the authoritative current phase without another welcome "
+                "or role acknowledgement. Do not infer whether the timeline moved forward, returned, "
+                "or reset. Frame every consequence through this wing's current-phase "
+                "responsibilities and active injects. End with one decision question owned by this "
+                "wing; do not transfer media, field operations, logistics, or another wing's work "
+                "to the participant, and do not list a complete response plan."
             ),
             "discussion": (
                 "Respond directly to the participant's substance. Briefly note one sound element "
                 "or one consequential gap using scenario evidence. Ask one follow-up only if it "
                 "advances a decision, trade-off, ownership commitment, or scenario consequence; "
-                "prefer asking what decision or operational outcome their work must enable. Do not "
+                "select a different substantive lens from the previous moderator question. Never "
+                "repeat or paraphrase an unanswered question about the decision or operational "
+                "outcome; state the gap and move to another lens or a natural transition. Do not "
                 "turn a broad operational answer into a technical-detail quiz or ask which tools, "
                 "data, indices, parameters, models, platforms, workflows, or technical products "
                 "they will use unless that detail is explicit in the current inject. For coordination "
@@ -631,7 +765,12 @@ Respond now in natural prose. Stay within the evidence above and do not introduc
         }
 
     def _needs_conversational_revision(
-        self, content: str, user_message: str, grounding_text: str
+        self,
+        content: str,
+        user_message: str,
+        grounding_text: str,
+        history: list[dict] | None = None,
+        wing_id: str | None = None,
     ) -> bool:
         if content.count("?") > 1 or STOCK_RESPONSE_RE.search(content):
             return True
@@ -643,7 +782,73 @@ Respond now in natural prose. Stay within the evidence above and do not introduc
         unsupported = self._technical_concepts(content) - self._technical_concepts(
             grounding_text
         )
-        return bool(unsupported)
+        return (
+            bool(unsupported)
+            or self._repeats_latest_question_lens(content, history)
+            or self._has_out_of_role_ownership(content, wing_id)
+        )
+
+    def _has_out_of_role_ownership(self, text: str, wing_id: str | None) -> bool:
+        if not wing_id:
+            return False
+        clauses = re.split(r"(?<=[.!?;])\s+|\s+(?:but|however|then)\s+", text or "")
+        for clause in clauses:
+            candidate = BOUNDARY_HANDOFF_RE.sub("", clause)
+            if not self._has_ownership_cue(candidate, wing_id):
+                continue
+            for owner_wings, topic_pattern in ROLE_OWNERSHIP_PATTERNS:
+                if wing_id not in owner_wings and topic_pattern.search(candidate):
+                    return True
+        return False
+
+    def _has_ownership_cue(self, clause: str, wing_id: str) -> bool:
+        if ROLE_OWNERSHIP_CUE_RE.search(clause):
+            return True
+        wing = self.metadata.mandates.get_wing(wing_id) or {}
+        wing_name = re.sub(r"\s*\([^)]*\)\s*$", "", self.get_wing_name(wing_id))
+        references = {
+            wing_name,
+            wing_id.replace("_", " "),
+            str(wing.get("short_name", "")),
+            str(wing.get("abbreviation", "")),
+        }
+        verbs = (
+            r"lead|manage|deploy|draft|issue|publish|run|develop|formulate|coordinate|execute|"
+            r"operate|activate|own|handle|oversee|design|maintain|conduct|obtain"
+        )
+        return any(
+            re.search(
+                rf"(?:\b{re.escape(reference)}\b.*\b(?:{verbs})\w*\b|"
+                rf"\b(?:{verbs})\w*\b.*\b{re.escape(reference)}\b)",
+                clause,
+                re.IGNORECASE,
+            )
+            for reference in references
+            if reference
+        )
+
+    def _question_lens(self, text: str) -> str | None:
+        question = next(iter(re.findall(r"[^.!?]*\?", text or "")), "")
+        for lens, pattern in QUESTION_LENS_PATTERNS:
+            if pattern.search(question):
+                return lens
+        return None
+
+    def _repeats_latest_question_lens(
+        self, content: str, history: list[dict] | None
+    ) -> bool:
+        current_lens = self._question_lens(content)
+        if not current_lens:
+            return False
+        latest_assistant = next(
+            (
+                str(turn.get("content", ""))
+                for turn in reversed(history or [])
+                if turn.get("role") == "assistant" and "?" in str(turn.get("content", ""))
+            ),
+            "",
+        )
+        return self._question_lens(latest_assistant) == current_lens
 
     def _revise_response(
         self,
@@ -652,13 +857,14 @@ Respond now in natural prose. Stay within the evidence above and do not introduc
         user_message: str,
         grounding_text: str,
         history: list[dict] | None = None,
+        wing_id: str | None = None,
         suppress_welcome: bool = False,
     ) -> str:
         supported_concepts = ", ".join(sorted(self._technical_concepts(grounding_text)))
         supported_concepts = supported_concepts or "none"
         if self.rewrite_llm is None:
             return self._safe_response_fallback(
-                draft, user_message, grounding_text, history
+                draft, user_message, grounding_text, history, wing_id
             )
         revision_request = HumanMessage(content=f"""Rewrite the moderator draft below before it is shown.
 
@@ -671,7 +877,7 @@ Draft:
 Technical concepts explicitly supported by the participant, scenario, retrieved evidence, or current inject:
 {supported_concepts}
 
-Keep valid scenario facts and concise feedback. Remove unsupported specialist mechanisms, tools, data sources, indices, parameters, models, platforms, thresholds, protocols, workflows, or technical products; preserve any concept listed as supported above when it is relevant. Replace the question with at most one natural command-level question about a priority, decision, trade-off, accountable owner, operational outcome, or contingency. Do not use the word "specific" unless the participant did. Use 2-4 natural sentences and output only the rewritten response.""")
+Keep valid scenario facts and concise feedback. Remove unsupported specialist mechanisms, tools, data sources, indices, parameters, models, platforms, thresholds, protocols, workflows, or technical products; preserve any concept listed as supported above when it is relevant. Remove any request for the participant to lead or execute another wing's responsibilities; coordination may ask only for this wing's mandated input or handoff. Replace the question with at most one natural command-level question about a priority, decision, trade-off, accountable owner, operational outcome, or contingency. Do not use the word "specific" unless the participant did. Use 2-4 natural sentences and output only the rewritten response.""")
         try:
             result = self.rewrite_llm.invoke([
                 *messages,
@@ -680,17 +886,17 @@ Keep valid scenario facts and concise feedback. Remove unsupported specialist me
             ])
         except Exception:
             return self._safe_response_fallback(
-                draft, user_message, grounding_text, history
+                draft, user_message, grounding_text, history, wing_id
             )
         revised = self._extract_content(result)
         revised = self._strip_thinking(revised)
         revised = self._sanitize_output(revised, suppress_welcome=suppress_welcome)
         if revised and not self._needs_conversational_revision(
-            revised, user_message, grounding_text
+            revised, user_message, grounding_text, history, wing_id
         ):
             return revised
         return self._safe_response_fallback(
-            draft, user_message, grounding_text, history
+            draft, user_message, grounding_text, history, wing_id
         )
 
     def _safe_response_fallback(
@@ -699,11 +905,14 @@ Keep valid scenario facts and concise feedback. Remove unsupported specialist me
         user_message: str,
         grounding_text: str,
         history: list[dict] | None = None,
+        wing_id: str | None = None,
     ) -> str:
         supported = self._technical_concepts(grounding_text)
         safe_statements = []
         for sentence in re.split(r"(?<=[.!?])\s+", draft or ""):
             if "?" in sentence or STOCK_RESPONSE_RE.search(sentence):
+                continue
+            if self._has_out_of_role_ownership(sentence, wing_id):
                 continue
             if self._technical_concepts(sentence) - supported:
                 continue
@@ -740,20 +949,25 @@ Keep valid scenario facts and concise feedback. Remove unsupported specialist me
         prior_text = " ".join(
             str(turn.get("content", "")) for turn in (history or [])
         ).lower()
+        latest_assistant = next(
+            (
+                str(turn.get("content", ""))
+                for turn in reversed(history or [])
+                if turn.get("role") == "assistant"
+            ),
+            "",
+        )
+        previous_lens = self._question_lens(latest_assistant)
         available = [
-            candidate for candidate in questions if candidate.lower() not in prior_text
+            candidate
+            for candidate in questions
+            if candidate.lower() not in prior_text
+            and self._question_lens(candidate) != previous_lens
         ]
         if available:
             question = available[0]
         else:
-            latest_assistant = next(
-                (
-                    str(turn.get("content", "")).lower()
-                    for turn in reversed(history or [])
-                    if turn.get("role") == "assistant"
-                ),
-                "",
-            )
+            latest_assistant = latest_assistant.lower()
             alternatives = [
                 candidate
                 for candidate in questions

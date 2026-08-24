@@ -56,6 +56,8 @@ def test_session_header_is_required_and_unknown_sessions_are_rejected(client: Te
         ("get", "/api/wings", {}),
         ("get", "/api/wings/operations_logistic/actions", {}),
         ("get", "/api/injects", {}),
+        ("delete", "/api/session/messages/operations_logistic", {}),
+        ("post", "/api/wings/operations_logistic/phase-briefing", {}),
         ("get", "/api/scenario/upload/unknown", {}),
         ("post", "/api/phase/advance", {}),
         ("post", "/api/phase/back", {}),

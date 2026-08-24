@@ -116,8 +116,22 @@ def init_db():
                 content TEXT NOT NULL,
                 phase_id TEXT,
                 wing_id TEXT,
+                kind TEXT NOT NULL DEFAULT 'general_chat',
                 created_at TEXT NOT NULL,
                 token_count INTEGER,
+                FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+            )
+        """)
+
+        # Distinguish a never-opened wing (which gets an automatic orientation)
+        # from a deliberately cleared transcript, including after page reload.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS chat_history_clears (
+                session_id TEXT NOT NULL,
+                wing_id TEXT NOT NULL,
+                cleared_at TEXT NOT NULL,
+                version INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (session_id, wing_id),
                 FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
             )
         """)
@@ -178,6 +192,18 @@ def _migrate():
         existing_messages = {row["name"] for row in conn.execute("PRAGMA table_info(messages)")}
         if existing_messages and "wing_id" not in existing_messages:
             conn.execute("ALTER TABLE messages ADD COLUMN wing_id TEXT")
+        if existing_messages and "kind" not in existing_messages:
+            conn.execute(
+                "ALTER TABLE messages ADD COLUMN kind TEXT NOT NULL DEFAULT 'general_chat'"
+            )
+
+        clear_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(chat_history_clears)")
+        }
+        if clear_columns and "version" not in clear_columns:
+            conn.execute(
+                "ALTER TABLE chat_history_clears ADD COLUMN version INTEGER NOT NULL DEFAULT 0"
+            )
 
         # localhost, loopback, and LAN IPs are separate browser origins. Keep
         # their UI and permissions identical in this trusted-LAN deployment.
@@ -359,14 +385,52 @@ def save_message(
     phase_id: Optional[str] = None,
     token_count: Optional[int] = None,
     wing_id: Optional[str] = None,
+    kind: str = "general_chat",
 ) -> int:
     with get_connection() as conn:
         cur = conn.execute(
-            "INSERT INTO messages (session_id, role, content, phase_id, wing_id, created_at, token_count)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (session_id, role, content, phase_id, wing_id, _now(), token_count),
+            "INSERT INTO messages (session_id, role, content, phase_id, wing_id, kind, created_at, token_count)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (session_id, role, content, phase_id, wing_id, kind, _now(), token_count),
         )
         return cur.lastrowid
+
+
+def save_message_if_history_version(
+    session_id: str,
+    wing_id: str,
+    expected_version: int,
+    role: str,
+    content: str,
+    phase_id: Optional[str] = None,
+    kind: str = "general_chat",
+    exercise_id: Optional[str] = None,
+    expected_phase_index: Optional[int] = None,
+) -> Optional[int]:
+    """Persist a message only if clear-history state has not changed."""
+    with get_connection() as conn:
+        # Serialize the version check and insert against clear-history writes.
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT version FROM chat_history_clears WHERE session_id = ? AND wing_id = ?",
+            (session_id, wing_id),
+        ).fetchone()
+        current_version = int(row["version"]) if row else 0
+        if current_version != expected_version:
+            return None
+        if exercise_id is not None and expected_phase_index is not None:
+            exercise = conn.execute(
+                "SELECT current_phase_index FROM exercises WHERE id = ?",
+                (exercise_id,),
+            ).fetchone()
+            if not exercise or int(exercise["current_phase_index"]) != expected_phase_index:
+                return None
+        cursor = conn.execute(
+            "INSERT INTO messages (session_id, role, content, phase_id, wing_id, kind, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (session_id, role, content, phase_id, wing_id, kind, _now()),
+        )
+        return cursor.lastrowid
 
 
 def load_messages(session_id: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -389,6 +453,51 @@ def load_messages(session_id: str, limit: Optional[int] = None) -> List[Dict[str
                 "SELECT * FROM messages WHERE session_id = ? ORDER BY id ASC", (session_id,)
             ).fetchall()
     return [dict(row) for row in rows]
+
+
+def delete_messages_for_wing(session_id: str, wing_id: str) -> int:
+    """Delete one session's transcript for one wing and return the row count."""
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "DELETE FROM messages WHERE session_id = ? AND wing_id = ?"
+            " AND kind IN ('general_chat', 'phase_briefing')",
+            (session_id, wing_id),
+        )
+        conn.execute(
+            "INSERT INTO chat_history_clears (session_id, wing_id, cleared_at, version)"
+            " VALUES (?, ?, ?, 1) ON CONFLICT(session_id, wing_id)"
+            " DO UPDATE SET cleared_at = excluded.cleared_at, version = version + 1",
+            (session_id, wing_id, _now()),
+        )
+        return cursor.rowcount
+
+
+def load_message_snapshot(session_id: str) -> tuple[list[Dict[str, Any]], list[str]]:
+    """Load transcript and clear markers from one consistent read transaction."""
+    with get_connection() as conn:
+        conn.execute("BEGIN")
+        message_rows = conn.execute(
+            "SELECT * FROM messages WHERE session_id = ? ORDER BY id ASC",
+            (session_id,),
+        ).fetchall()
+        clear_rows = conn.execute(
+            "SELECT wing_id FROM chat_history_clears WHERE session_id = ?",
+            (session_id,),
+        ).fetchall()
+    return (
+        [dict(row) for row in message_rows],
+        [str(row["wing_id"]) for row in clear_rows],
+    )
+
+
+def get_message_history_version(session_id: str, wing_id: str) -> int:
+    """Return the clear-history version used to reject stale chat writes."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT version FROM chat_history_clears WHERE session_id = ? AND wing_id = ?",
+            (session_id, wing_id),
+        ).fetchone()
+    return int(row["version"]) if row else 0
 
 
 # ── Inject lifecycle ledger ─────────────────────────────────

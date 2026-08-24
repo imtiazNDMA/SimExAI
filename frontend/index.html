@@ -110,10 +110,16 @@
             <span class="chat-phase-tag" id="chat-phase-label">—</span>
           </div>
         </div>
-        <button class="topbar-action-btn" id="btn-show-actions" title="Wing Actions" disabled>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>
-          Actions
-        </button>
+        <div class="topbar-actions">
+          <button class="topbar-action-btn destructive" id="btn-clear-chat" title="Clear chat history" aria-label="Clear chat history" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
+            <span class="button-label">Clear chat</span>
+          </button>
+          <button class="topbar-action-btn" id="btn-show-actions" title="Wing Actions" disabled>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>
+            <span class="button-label">Actions</span>
+          </button>
+        </div>
       </div>
 
       <!-- Messages -->

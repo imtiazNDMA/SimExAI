@@ -28,9 +28,13 @@ const state = {
   currentPhase: null,
   injects:     [],
   messages:    {},  // { wingId: [{ type, text, wingName, time }] }
+  clearedWings: new Set(),
+  chatRequestVersions: {},
+  phaseBriefingVersions: {},
   session:     null,
 };
 let injectRequestVersion = 0;
+let phaseControlPending = false;
 
 // ── DOM ────────────────────────────────────────
 const $  = (sel) => document.querySelector(sel);
@@ -51,6 +55,7 @@ const btnBack         = $('#btn-back-phase');
 const btnReset        = $('#btn-reset');
 const btnUploadScenario = $('#btn-upload-scenario');
 const fileInputScenario = $('#scenario-file-input');
+const btnClearChat    = $('#btn-clear-chat');
 const btnShowActions  = $('#btn-show-actions');
 const actionsModal    = $('#actions-modal');
 const actionsList     = $('#actions-list');
@@ -157,6 +162,7 @@ async function init() {
 async function loadTranscript() {
   const data = await api('/session/messages');
   if (!data?.messages) return;
+  state.clearedWings = new Set(data.cleared_wings || []);
   const wingNameOf = wingId =>
     state.wings.find(wing => wing.id === wingId)?.name || 'Moderator';
   data.messages.forEach(message => {
@@ -166,6 +172,7 @@ async function loadTranscript() {
     state.messages[wingId].push({
       type: message.role === 'user' ? 'user' : 'system',
       text: message.content,
+      kind: message.kind || 'general_chat',
       wingName: message.role === 'assistant' ? wingNameOf(wingId) : '',
       time: new Date(message.created_at).toLocaleTimeString('en-US', {
         hour: '2-digit',
@@ -173,6 +180,7 @@ async function loadTranscript() {
       }),
     });
   });
+  updateClearChatButton();
 }
 
 function updateControllerControls() {
@@ -476,27 +484,30 @@ function selectWing(wingId) {
   chatWingName.textContent = state.activeWing.name;
   chatPhaseLabel.textContent = state.currentPhase ? state.currentPhase.label : '—';
 
-  chatInput.disabled = false;
-  btnSend.disabled = false;
-  if (btnMic) btnMic.disabled = false;
+  const chatIsClearing = clearingChatWingId === wingId;
+  chatInput.disabled = chatIsClearing;
+  btnSend.disabled = chatIsClearing;
+  if (btnMic) btnMic.disabled = chatIsClearing;
   btnShowActions.disabled = false;
   chatInput.focus();
 
   renderMessages();
   loadInjects(wingId);
+  updateClearChatButton();
 
-  if (!state.messages[wingId] || state.messages[wingId].length === 0) {
+  if (
+    (!state.messages[wingId] || state.messages[wingId].length === 0)
+    && !state.clearedWings.has(wingId)
+  ) {
     sendGreeting(wingId);
   }
 }
 
-async function sendGreeting(wingId, isPhaseChange = false) {
-  const phaseId = state.currentPhase ? state.currentPhase.id : 'd_minus_90';
+async function sendGreeting(wingId) {
+  const requestVersion = state.chatRequestVersions[wingId] || 0;
   showTypingIndicator();
 
-  let msgText = isPhaseChange
-    ? `Phase advancement notice: ${state.currentPhase?.label || phaseId}. Brief me on the new phase priorities based on the scenario records. Do not welcome me, do not acknowledge my presence or role again, and do not repeat the exercise title.`
-    : 'hello';
+  const msgText = 'hello';
 
   addMessage(wingId, 'user', msgText);
 
@@ -504,7 +515,9 @@ async function sendGreeting(wingId, isPhaseChange = false) {
     method: 'POST',
     body: JSON.stringify({ wing_id: wingId, message: msgText }),
   });
+  if ((state.chatRequestVersions[wingId] || 0) !== requestVersion) return;
   hideTypingIndicator();
+  if (handleDiscardedChatResponse(wingId, data)) return;
   if (data) {
     addMessage(wingId, 'system', data.response, data.wing_name);
     ttsAutoPlay(data.response);
@@ -512,14 +525,15 @@ async function sendGreeting(wingId, isPhaseChange = false) {
 }
 
 // ── Chat ───────────────────────────────────────
-function addMessage(wingId, type, text, wingName = '') {
+function addMessage(wingId, type, text, wingName = '', kind = 'general_chat') {
   if (!state.messages[wingId]) state.messages[wingId] = [];
   const now = new Date();
   state.messages[wingId].push({
-    type, text, wingName,
+    type, text, wingName, kind,
     time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
   });
   if (state.activeWing && state.activeWing.id === wingId) renderMessages();
+  updateClearChatButton();
 }
 
 function renderMessages() {
@@ -589,7 +603,9 @@ function buildWelcomeHTML() {
         <h1 class="welcome-title">SimexAI</h1>
         <p class="welcome-sub">AI-powered disaster simulation platform<br>for NDMA Pakistan</p>
         ${scenarioGrid}
-        <p class="welcome-cta" style="margin-top: 30px;">← Select a wing from the sidebar to begin</p>
+        <p class="welcome-cta" style="margin-top: 30px;">${state.activeWing
+          ? 'Type a message below to begin a new conversation.'
+          : '← Select a wing from the sidebar to begin'}</p>
       </div>
     </div>`;
 }
@@ -633,10 +649,96 @@ function showTypingIndicator() {
   }
   chatMessages.appendChild(typingEl);
   chatMessages.scrollTop = chatMessages.scrollHeight;
+  updateClearChatButton();
 }
 function hideTypingIndicator() {
   if (typingEl) { typingEl.remove(); typingEl = null; }
+  updateClearChatButton();
 }
+
+let clearingChatWingId = null;
+
+function updateClearChatButton() {
+  if (!btnClearChat) return;
+  const wingId = state.activeWing?.id;
+  const hasHistory = Boolean(
+    wingId && state.messages[wingId]?.some(message =>
+      message.kind === 'general_chat' || message.kind === 'phase_briefing'
+    )
+  );
+  btnClearChat.disabled = !hasHistory || Boolean(clearingChatWingId);
+}
+
+function nextChatRequestVersion(wingId) {
+  const nextVersion = (state.chatRequestVersions[wingId] || 0) + 1;
+  state.chatRequestVersions[wingId] = nextVersion;
+  return nextVersion;
+}
+
+function setChatControlsDisabled(wingId, disabled) {
+  if (state.activeWing?.id !== wingId) return;
+  chatInput.disabled = disabled;
+  btnSend.disabled = disabled;
+  if (btnMic) btnMic.disabled = disabled;
+}
+
+function handleDiscardedChatResponse(wingId, data) {
+  if (!data?.discarded) return false;
+  if (data.discard_reason === 'phase_changed') {
+    showToast('The timeline changed before this wing briefing completed.');
+    return true;
+  }
+  state.messages[wingId] = (state.messages[wingId] || []).filter(
+    message => message.kind !== 'general_chat' && message.kind !== 'phase_briefing'
+  );
+  state.clearedWings.add(wingId);
+  if (state.activeWing?.id === wingId) renderMessages();
+  updateClearChatButton();
+  showToast('This chat was cleared while a response was being generated.');
+  return true;
+}
+
+btnClearChat.addEventListener('click', async () => {
+  const wing = state.activeWing;
+  if (!wing || !state.messages[wing.id]?.length || clearingChatWingId) return;
+  const confirmed = window.confirm(
+    `Clear chat history for ${wing.name}?\n\nThe scenario, exercise phase, inject status, and assessment records will be preserved.`
+  );
+  if (!confirmed) return;
+
+  clearingChatWingId = wing.id;
+  setChatControlsDisabled(wing.id, true);
+  updateClearChatButton();
+  if (sttIsListening && sttRecognition) sttRecognition.stop();
+  ttsStop();
+  hideTypingIndicator();
+
+  const data = await api(`/session/messages/${encodeURIComponent(wing.id)}`, {
+    method: 'DELETE',
+  });
+  if (!data) {
+    clearingChatWingId = null;
+    setChatControlsDisabled(wing.id, false);
+    updateClearChatButton();
+    showToast(`Could not clear chat for ${wing.name}. Please try again.`);
+    btnClearChat.focus();
+    return;
+  }
+
+  nextChatRequestVersion(wing.id);
+  state.phaseBriefingVersions[wing.id] =
+    (state.phaseBriefingVersions[wing.id] || 0) + 1;
+  state.messages[wing.id] = (state.messages[wing.id] || []).filter(
+    message => message.kind !== 'general_chat' && message.kind !== 'phase_briefing'
+  );
+  state.clearedWings.add(wing.id);
+  clearingChatWingId = null;
+  setChatControlsDisabled(wing.id, false);
+  if (state.activeWing?.id === wing.id) renderMessages();
+  updateClearChatButton();
+  showToast(`Chat cleared for ${wing.name}`);
+  if (state.activeWing?.id === wing.id) chatInput.focus();
+});
 
 chatForm.addEventListener('submit', async e => {
   e.preventDefault();
@@ -644,6 +746,7 @@ chatForm.addEventListener('submit', async e => {
   if (!message || !state.activeWing) return;
 
   const wingId  = state.activeWing.id;
+  const requestVersion = state.chatRequestVersions[wingId] || 0;
   addMessage(wingId, 'user', message);
   chatInput.value = '';
 
@@ -652,8 +755,10 @@ chatForm.addEventListener('submit', async e => {
     method: 'POST',
     body: JSON.stringify({ wing_id: wingId, message }),
   });
+  if ((state.chatRequestVersions[wingId] || 0) !== requestVersion) return;
   hideTypingIndicator();
 
+  if (handleDiscardedChatResponse(wingId, data)) return;
   if (data) {
     addMessage(wingId, 'system', data.response, data.wing_name);
     ttsAutoPlay(data.response);
@@ -692,18 +797,32 @@ function renderTimeline() {
 
 // ── Phase Controls ─────────────────────────────
 btnAdvance.addEventListener('click', async () => {
+  if (phaseControlPending) return;
+  phaseControlPending = true;
+  updateButtonStates();
   const data = await api('/phase/advance', { method: 'POST' });
-  if (data?.phases) applyPhaseUpdate(data, '⏩ Advanced to');
+  if (data?.phases) await applyPhaseUpdate(data, '⏩ Advanced to');
+  phaseControlPending = false;
+  updateButtonStates();
 });
 
 btnBack.addEventListener('click', async () => {
+  if (phaseControlPending) return;
+  phaseControlPending = true;
+  updateButtonStates();
   const data = await api('/phase/back', { method: 'POST' });
-  if (data?.phases) applyPhaseUpdate(data, '⏪ Returned to');
+  if (data?.phases) await applyPhaseUpdate(data, '⏪ Returned to');
+  phaseControlPending = false;
+  updateButtonStates();
 });
 
 async function applyPhaseUpdate(data, verb) {
+  const previousPhaseId = state.currentPhase?.id;
   state.phases = data.phases;
   state.currentPhase = data.phases.find(p => p.is_active);
+  const phaseChanged = Boolean(
+    state.currentPhase && state.currentPhase.id !== previousPhaseId
+  );
   renderTimeline();
 
   if (state.currentPhase) {
@@ -711,14 +830,13 @@ async function applyPhaseUpdate(data, verb) {
     drawerPhaseLabel.textContent = state.currentPhase.label;
   }
 
-  if (data.injects) { state.injects = data.injects; renderInjects(); }
-  else await loadInjects();
+  await loadInjects(state.activeWing?.id);
 
-  if (state.activeWing && state.currentPhase) {
+  if (phaseChanged && state.activeWing && state.currentPhase) {
     addMessage(state.activeWing.id, 'notification',
       `${verb} **${state.currentPhase.label}** (${state.currentPhase.days})`,
       'Exercise Control');
-    sendGreeting(state.activeWing.id, true);
+    await requestPhaseBriefing(state.activeWing.id);
   }
   updateButtonStates();
   if (data.message) showToast(data.message);
@@ -731,8 +849,28 @@ function updateButtonStates() {
     return;
   }
   const idx = state.phases.findIndex(p => p.is_active);
-  btnBack.disabled    = idx === 0;
-  btnAdvance.disabled = idx === state.phases.length - 1;
+  btnBack.disabled    = phaseControlPending || idx === 0;
+  btnAdvance.disabled = phaseControlPending || idx === state.phases.length - 1;
+}
+
+async function requestPhaseBriefing(wingId) {
+  const requestVersion = (state.phaseBriefingVersions[wingId] || 0) + 1;
+  state.phaseBriefingVersions[wingId] = requestVersion;
+  const expectedPhaseId = state.currentPhase?.id;
+  showTypingIndicator();
+  const data = await api(`/wings/${encodeURIComponent(wingId)}/phase-briefing`, {
+    method: 'POST',
+  });
+  if (
+    requestVersion !== state.phaseBriefingVersions[wingId]
+    || state.currentPhase?.id !== expectedPhaseId
+  ) return;
+  hideTypingIndicator();
+  if (handleDiscardedChatResponse(wingId, data)) return;
+  if (data && data.phase_id === expectedPhaseId) {
+    addMessage(wingId, 'system', data.response, data.wing_name, 'phase_briefing');
+    ttsAutoPlay(data.response);
+  }
 }
 
 async function syncSharedPhase() {
@@ -755,6 +893,7 @@ async function syncSharedPhase() {
       `Exercise control moved the shared timeline to **${nextPhase.label}** (${nextPhase.days})`,
       'Exercise Control',
     );
+    await requestPhaseBriefing(state.activeWing.id);
   }
 }
 
@@ -764,12 +903,17 @@ document.addEventListener('visibilitychange', () => {
 
 btnReset.addEventListener('click', async () => {
   if (!confirm('Reset the exercise timeline to D-90? The uploaded scenario and chat will be preserved.')) return;
+  if (phaseControlPending) return;
+  phaseControlPending = true;
+  updateButtonStates();
   const data = await api('/phase/reset', { method: 'POST' });
   if (data?.phases) {
     state.scenario = data.scenario || state.scenario;
     updateHeader();
     await applyPhaseUpdate(data, 'Reset to');
   }
+  phaseControlPending = false;
+  updateButtonStates();
 });
 
 // ── Injects ────────────────────────────────────
@@ -907,6 +1051,8 @@ drawerOverlay.addEventListener('click', closeDrawer);
 function showToast(message) {
   const el = document.createElement('div');
   el.className = 'toast';
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
   el.textContent = message;
   document.body.appendChild(el);
   setTimeout(() => {
@@ -948,7 +1094,7 @@ function initSTT() {
       btnMic.classList.add('unavailable');
       btnMic.title = 'Voice input needs HTTPS — this page is served over plain HTTP';
       btnMic.addEventListener('click', () => showToast(
-        'Voice input requires a secure (HTTPS) connection. Type your response instead.'
+        'Voice input requires HTTPS on LAN. Ask the controller to start SimEx AI with -Https.'
       ));
     }
     return;

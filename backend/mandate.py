@@ -141,7 +141,33 @@ class MandateRegistry:
         if not wing:
             return "No mandate found for this wing."
 
-        return f"Mandate scope: {wing.get('mandate_scope', 'Not specified')}"
+        responsibilities = self.get_phase_responsibilities(wing_id, phase_id)
+        phase_actions = wing.get("simex_phase_actions", {}).get(phase_id) or []
+        other_wings = [
+            f"- {other.get('name', other_id)}: {other.get('mandate_scope', 'Not specified')}"
+            for other_id, other in self.wings.items()
+            if other_id != wing_id
+        ]
+
+        sections = [
+            f"Mandate scope: {wing.get('mandate_scope', 'Not specified')}",
+            "Current-phase responsibilities:\n" + self._bullets(responsibilities),
+        ]
+        if phase_actions:
+            sections.append(
+                "Current-phase exercise actions:\n" + self._bullets(phase_actions)
+            )
+        sections.extend(
+            [
+                (
+                    "Coordination boundary: keep ownership with this wing. It may produce "
+                    "mandated information, decisions, or support for another wing, but do not "
+                    "assign it that wing's downstream execution responsibilities."
+                ),
+                "Other-wing ownership boundaries:\n" + "\n".join(other_wings),
+            ]
+        )
+        return "\n\n".join(sections)
 
     def _bullets(self, items: Iterable[str]) -> str:
         return "\n".join(f"- {item}" for item in items)

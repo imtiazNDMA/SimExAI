@@ -758,6 +758,13 @@ html[data-theme="light"] .phase-step.active .phase-step-label { color: var(--pur
 }
 html[data-theme="light"] .chat-phase-tag { color: var(--purple); }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .topbar-action-btn {
   display: inline-flex;
   align-items: center;
@@ -776,6 +783,11 @@ html[data-theme="light"] .chat-phase-tag { color: var(--purple); }
 .topbar-action-btn:hover:not(:disabled) {
   background: var(--surface-1);
   color: var(--text);
+}
+.topbar-action-btn.destructive:hover:not(:disabled) {
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.08);
 }
 .topbar-action-btn:disabled {
   opacity: 0.35;
@@ -1094,6 +1106,11 @@ html[data-theme="light"] .message.notification .message-bubble {
 .mic-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+.mic-btn.unavailable {
+  color: var(--text-3);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  cursor: help;
 }
 .mic-btn.recording {
   background: rgba(239, 68, 68, 0.2);
@@ -1489,6 +1506,15 @@ html[data-theme="light"] .inject-severity-tag.low      { color: #047857; }
     max-width: 94%;
   }
   .message.system { width: auto; }
+
+  .topbar-actions { gap: 6px; }
+  .topbar-action-btn {
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    padding: 0;
+  }
+  .topbar-action-btn .button-label { display: none; }
 
   .input-dock { padding: 10px 10px 12px; }
   .timeline-strip { padding-bottom: 8px; }
